@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HALAR — Task Manager</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+:root{--bg:#0a0c10;--surface:#111318;--card:#181b22;--border:#252834;--accent:#4f8ef7;--accent2:#f97b4f;--green:#3ecf6e;--yellow:#f5c542;--red:#f55e5e;--text:#e6e8f0;--muted:#6b708a;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* LOGIN */
+#loginScreen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:1000;}
+.login-box{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:40px 36px;width:360px;max-width:95vw;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.5);}
+.login-logo{font-size:38px;font-weight:800;color:var(--accent);margin-bottom:4px;letter-spacing:4px;}
+.login-tagline{font-size:14px;font-weight:500;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-bottom:28px;}
+.login-label{font-size:12px;color:var(--muted);text-align:left;margin-bottom:6px;font-weight:500;}
+.login-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:12px 14px;color:var(--text);font-size:22px;font-family:'DM Mono',monospace;letter-spacing:6px;outline:none;text-align:center;transition:border-color .13s;margin-bottom:14px;}
+.login-input:focus{border-color:var(--accent);}
+.login-btn{width:100%;padding:12px;border-radius:9px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:700;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:opacity .13s;}
+.login-btn:hover{opacity:.85;}
+.login-btn:disabled{opacity:.5;cursor:not-allowed;}
+.login-error{font-size:12.5px;color:var(--red);margin-top:10px;min-height:18px;}
+.login-status{font-size:11.5px;margin-top:16px;line-height:1.6;padding:10px;border-radius:8px;}
+.login-status.connecting{color:var(--yellow);background:rgba(245,197,66,.08);}
+.login-status.ready{color:var(--green);background:rgba(62,207,110,.08);}
+.login-status.error{color:var(--red);background:rgba(245,94,94,.08);}
+
+/* APP SHELL */
+#appShell{display:none;flex-direction:column;height:100vh;}
+
+/* HEADER */
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 16px;display:flex;align-items:center;gap:8px;height:54px;position:sticky;top:0;z-index:100;flex-shrink:0;}
+.logo{font-size:16px;font-weight:700;color:var(--accent);white-space:nowrap;}
+.logo span{color:var(--text);}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite;flex-shrink:0;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.tabs-bar{display:flex;align-items:center;gap:3px;flex:1;overflow-x:auto;scrollbar-width:none;}
+.tabs-bar::-webkit-scrollbar{display:none;}
+.tab{padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:500;color:var(--muted);border:1px solid transparent;white-space:nowrap;transition:all .13s;display:flex;align-items:center;gap:5px;}
+.tab:hover{color:var(--text);background:var(--card);}
+.tab.active{color:var(--accent);background:rgba(79,142,247,.1);border-color:rgba(79,142,247,.22);}
+.tab-special.active{color:var(--accent2);background:rgba(249,123,79,.1);border-color:rgba(249,123,79,.22);}
+.tab-peer.active{color:var(--green);background:rgba(62,207,110,.1);border-color:rgba(62,207,110,.22);}
+.tab .badge{background:var(--accent2);color:#fff;border-radius:20px;font-size:9px;padding:1px 5px;font-weight:700;}
+.header-right{display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0;}
+.bell-btn{position:relative;width:32px;height:32px;border-radius:7px;border:1px solid var(--border);background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:all .13s;}
+.bell-btn:hover{border-color:var(--yellow);}
+#bellBadge{display:none;position:absolute;top:-5px;right:-5px;background:var(--red);color:#fff;border-radius:20px;font-size:9px;padding:1px 5px;font-weight:700;}
+.user-chip{display:flex;align-items:center;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:12px;}
+.user-chip .uname{font-weight:600;}
+.user-chip .urole{font-size:10px;color:var(--muted);margin-left:6px;}
+.hdr-btn{padding:5px 10px;border-radius:6px;font-size:11.5px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .13s;border:1px solid var(--border);background:none;color:var(--muted);}
+.hdr-btn:hover{color:var(--text);}
+.hdr-btn.danger:hover{color:var(--red);border-color:var(--red);}
+
+/* MAIN */
+main{flex:1;display:flex;overflow:hidden;}
+
+/* SIDEBAR */
+.sidebar{width:210px;min-width:210px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:12px 10px;gap:5px;overflow-y:auto;}
+.sidebar-label{font-size:9.5px;color:var(--muted);text-transform:uppercase;letter-spacing:1.3px;font-weight:600;padding:0 4px;margin-bottom:2px;}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+.stat-box{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:9px 10px;}
+.stat-box .num{font-size:19px;font-weight:700;font-family:'DM Mono',monospace;}
+.stat-box .lbl{font-size:9.5px;color:var(--muted);margin-top:1px;}
+.stat-box.todo .num{color:var(--yellow);}
+.stat-box.prog .num{color:var(--accent);}
+.stat-box.done .num{color:var(--green);}
+.stat-box.fu .num{color:var(--accent2);}
+.stat-box.od .num{color:var(--red);}
+.sidebar-divider{border:none;border-top:1px solid var(--border);margin:4px 0;}
+.filter-btn{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:6px;width:100%;cursor:pointer;font-size:11.5px;color:var(--muted);border:none;background:none;text-align:left;transition:all .12s;font-family:'Plus Jakarta Sans',sans-serif;}
+.filter-btn:hover{background:var(--card);color:var(--text);}
+.filter-btn.active{background:rgba(79,142,247,.09);color:var(--accent);}
+.filter-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+
+/* CONTENT */
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.content-header{padding:12px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;background:var(--bg);flex-shrink:0;}
+.employee-info{flex:1;}
+.employee-info h2{font-size:15px;font-weight:600;}
+.employee-info p{font-size:11px;color:var(--muted);margin-top:1px;}
+.btn-assign{padding:6px 12px;border-radius:7px;border:none;background:var(--accent);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:opacity .13s;}
+.btn-assign:hover{opacity:.85;}
+.btn-followup{padding:6px 12px;border-radius:7px;background:rgba(249,123,79,.1);border:1px solid rgba(249,123,79,.25);color:var(--accent2);font-size:12px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:all .13s;}
+.btn-followup:hover{background:rgba(249,123,79,.2);}
+
+/* TASK LIST */
+.task-list{flex:1;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;gap:10px;}
+.group-header{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;padding:8px 4px 4px;display:flex;align-items:center;gap:8px;}
+.group-count{background:var(--red);color:#fff;border-radius:20px;font-size:9px;padding:1px 7px;font-weight:700;text-transform:none;letter-spacing:0;}
+
+/* TASK CARD */
+.task-card{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:12px 14px;transition:border-color .13s;animation:fadeUp .2s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.task-card:hover{border-color:#303448;}
+.task-card.followup-card{border-left:3px solid var(--accent2);}
+.task-card.overdue-card{border-left:3px solid var(--red);background:rgba(245,94,94,.03);}
+.task-card.duetoday-card{border-left:3px solid var(--yellow);background:rgba(245,197,66,.03);}
+.task-card.unread-card{border-color:rgba(79,142,247,.4);background:rgba(79,142,247,.04);}
+.unread-banner{font-size:11px;font-weight:600;color:var(--accent);background:rgba(79,142,247,.1);border-radius:5px;padding:4px 10px;margin-bottom:10px;}
+.assigner-banner{font-size:11px;font-weight:500;color:var(--muted);background:rgba(62,207,110,.07);border:1px solid rgba(62,207,110,.15);border-radius:5px;padding:5px 10px;margin-bottom:10px;}
+.task-top{display:flex;gap:10px;}
+.task-check{width:18px;height:18px;border-radius:5px;border:2px solid var(--border);cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;transition:all .13s;background:var(--bg);}
+.task-check:hover{border-color:var(--green);}
+.task-check.checked{background:var(--green);border-color:var(--green);}
+.task-check.checked::after{content:'✓';font-size:10px;color:#fff;font-weight:800;}
+.task-check.view-only{opacity:.35;cursor:default;pointer-events:none;}
+.task-body{flex:1;}
+.task-title{font-size:13px;font-weight:600;line-height:1.4;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.task-title.done-text{text-decoration:line-through;color:var(--muted);}
+.status-pill{font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;text-transform:uppercase;letter-spacing:.6px;}
+.sp-todo{background:rgba(245,197,66,.1);color:var(--yellow);}
+.sp-inprog{background:rgba(79,142,247,.1);color:var(--accent);}
+.sp-done{background:rgba(62,207,110,.1);color:var(--green);}
+.priority-pill{font-size:9px;font-weight:700;padding:2px 7px;border-radius:20px;}
+.pri-high{background:rgba(245,94,94,.12);color:var(--red);}
+.pri-med{background:rgba(245,197,66,.1);color:var(--yellow);}
+.pri-low{background:rgba(62,207,110,.1);color:var(--green);}
+.emp-name-pill{font-size:9px;font-weight:600;padding:2px 7px;border-radius:20px;background:rgba(107,112,138,.15);color:var(--muted);}
+.task-meta{font-size:10.5px;color:var(--muted);margin-top:5px;display:flex;gap:10px;flex-wrap:wrap;}
+.overdue-text{color:var(--red)!important;font-weight:600;}
+.today-text{color:var(--yellow)!important;font-weight:600;}
+.task-comment{margin-top:8px;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 10px;font-size:12px;color:#a8adbe;line-height:1.5;}
+.task-actions{display:flex;gap:5px;margin-top:10px;flex-wrap:wrap;}
+.task-action-btn{font-size:11px;padding:4px 9px;border-radius:5px;border:1px solid var(--border);background:var(--bg);color:var(--muted);cursor:pointer;transition:all .12s;font-family:'Plus Jakarta Sans',sans-serif;}
+.task-action-btn:hover{border-color:var(--accent);color:var(--accent);}
+.task-action-btn.danger:hover{border-color:var(--red);color:var(--red);}
+.task-action-btn.ack-btn{border-color:rgba(79,142,247,.3);color:var(--accent);}
+.task-action-btn.edit-btn{border-color:rgba(245,197,66,.3);color:var(--yellow);}
+.task-action-btn.edit-btn:hover{border-color:var(--yellow);color:var(--yellow);background:rgba(245,197,66,.08);}
+.completion-info{margin-top:8px;padding:7px 10px;background:rgba(62,207,110,.06);border:1px solid rgba(62,207,110,.18);border-radius:7px;font-size:11px;color:var(--green);}
+.section-block{margin-top:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
+.section-label{font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+.followup-item{margin-bottom:7px;padding-bottom:7px;border-bottom:1px solid var(--border);}
+.followup-item:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none;}
+.followup-item-top{display:flex;align-items:center;gap:7px;font-size:12.5px;}
+.followup-dot{width:8px;height:8px;border-radius:50%;background:var(--accent2);flex-shrink:0;}
+.followup-dot.done{background:var(--green);}
+.followup-meta{font-size:10.5px;color:var(--muted);margin-top:2px;margin-left:15px;}
+.tiny-btn{font-size:10px;padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:none;color:var(--green);cursor:pointer;margin-left:auto;font-family:'Plus Jakarta Sans',sans-serif;flex-shrink:0;}
+.tiny-done-tag{font-size:10px;color:var(--green);margin-left:auto;flex-shrink:0;}
+.done-text{text-decoration:line-through;color:var(--muted);}
+.comment-item{margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--border);}
+.comment-item:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none;}
+.comment-author{font-size:11px;font-weight:600;color:var(--accent);}
+.comment-time{font-size:10px;color:var(--muted);font-weight:400;margin-left:6px;}
+.comment-text{font-size:12.5px;color:var(--text);margin-top:3px;line-height:1.5;}
+.emp-manage-list{display:flex;flex-direction:column;gap:8px;}
+.settings-panel{display:flex;flex-direction:column;gap:14px;}
+.settings-section{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 22px;}
+.settings-section-title{font-size:14px;font-weight:700;margin-bottom:6px;}
+.settings-section-desc{font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.5;}
+.settings-row{display:flex;gap:12px;margin-bottom:12px;}
+.settings-info-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;color:var(--muted);}
+.settings-info-row:last-child{border-bottom:none;}
+.settings-info-row b{color:var(--text);}
+.emp-row{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;display:flex;align-items:center;gap:12px;}
+.emp-row-info{flex:1;}
+.emp-row-name{font-size:14px;font-weight:600;}
+.emp-row-role{font-size:11.5px;color:var(--muted);margin-top:3px;}
+.emp-row-actions{display:flex;gap:6px;flex-wrap:wrap;}
+.empty-state{text-align:center;padding:50px 20px;color:var(--muted);}
+.empty-state .icon{font-size:34px;margin-bottom:10px;}
+.empty-state p{font-size:13px;}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(5px);z-index:200;align-items:center;justify-content:center;}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px 22px 18px;width:440px;max-width:95vw;max-height:90vh;overflow-y:auto;animation:modalIn .18s ease;}
+@keyframes modalIn{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+.modal h3{font-size:15px;font-weight:600;margin-bottom:14px;}
+.form-group{margin-bottom:11px;}
+.form-group label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:500;}
+.form-group input,.form-group textarea,.form-group select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:8px 10px;color:var(--text);font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;outline:none;transition:border-color .13s;resize:vertical;}
+.form-group input:focus,.form-group textarea:focus,.form-group select:focus{border-color:var(--accent);}
+.form-group select option{background:var(--card);}
+.modal-error{font-size:11.5px;color:var(--red);margin-top:-4px;margin-bottom:8px;min-height:16px;}
+.modal-actions{display:flex;gap:8px;margin-top:14px;justify-content:flex-end;}
+.btn-cancel{padding:7px 14px;border-radius:7px;border:1px solid var(--border);background:none;color:var(--muted);font-size:12px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;}
+.btn-cancel:hover{color:var(--text);}
+.btn-primary{padding:7px 14px;border-radius:7px;border:none;background:var(--accent);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;transition:opacity .13s;}
+.btn-primary:hover{opacity:.85;}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;}
+.btn-orange{padding:7px 14px;border-radius:7px;border:none;background:var(--accent2);color:#fff;font-size:12px;font-weight:600;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;}
+.rem-heading{font-size:13px;font-weight:700;margin:10px 0 6px;}
+.rem-heading.overdue{color:var(--red);}
+.rem-heading.today{color:var(--yellow);}
+.rem-item{font-size:12.5px;color:var(--text);padding:6px 10px;background:var(--bg);border-radius:6px;margin-bottom:4px;border-left:2px solid var(--border);}
+.rem-datetime{background:linear-gradient(135deg,rgba(79,142,247,.12),rgba(79,142,247,.05));border:1px solid rgba(79,142,247,.2);border-radius:10px;padding:14px 16px;margin-bottom:14px;text-align:center;}
+.rem-date{font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px;}
+.rem-time{font-size:28px;font-weight:700;font-family:'DM Mono',monospace;color:var(--accent);letter-spacing:2px;}
+.rem-admin-summary{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;}
+.rem-summary-row{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:2px;}
+.rem-summary-row span{font-size:10px;color:var(--muted);}
+.rem-summary-row b{font-size:18px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text);}
+.rem-summary-row.warn b{color:var(--red);}
+.rem-summary-row.caution b{color:var(--yellow);}
+.rem-all-clear{font-size:13px;color:var(--green);background:rgba(62,207,110,.08);border:1px solid rgba(62,207,110,.2);border-radius:8px;padding:12px;text-align:center;margin-top:8px;}
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:10px;}
+
+/* ══ MOBILE RESPONSIVE ════════════════════════════════ */
+@media (max-width: 768px) {
+
+  /* Hide desktop sidebar and tabs on mobile */
+  .sidebar { display: none !important; }
+  .tabs-bar { display: none !important; }
+  .user-chip .urole { display: none; }
+  .hdr-btn span { display: none; }
+
+  /* Header compact */
+  header { padding: 0 12px; height: 50px; gap: 6px; }
+  .logo { font-size: 15px; }
+
+  /* Hide some header buttons — moved to bottom nav */
+  .hdr-btn.admin-only { display: none !important; }
+  .hdr-btn.emp-only   { display: none !important; }
+
+  /* Main fills screen above bottom nav */
+  main { flex-direction: column; height: calc(100vh - 50px - 64px); }
+
+  /* Content fills full width */
+  .content { width: 100%; }
+  .content-header { padding: 10px 14px; flex-wrap: wrap; gap: 8px; }
+  .content-header h2 { font-size: 14px; }
+  .content-header p  { font-size: 10px; }
+
+  /* Bigger content header buttons on mobile */
+  #contentHeaderBtns { display: flex; gap: 6px; width: 100%; }
+  .btn-assign, .btn-followup { flex: 1; text-align: center; padding: 8px 6px; font-size: 11.5px; }
+
+  /* Task list padding */
+  .task-list { padding: 10px 12px; gap: 10px; }
+
+  /* Task cards — larger touch targets */
+  .task-card { padding: 14px 14px; border-radius: 12px; }
+  .task-check { width: 22px; height: 22px; border-radius: 6px; margin-top: 1px; flex-shrink: 0; }
+  .task-check.checked::after { font-size: 12px; }
+  .task-title { font-size: 13.5px; gap: 6px; }
+  .task-meta  { font-size: 11px; gap: 8px; margin-top: 6px; }
+  .task-actions { gap: 6px; margin-top: 12px; }
+  .task-action-btn { font-size: 12px; padding: 7px 12px; border-radius: 7px; }
+
+  /* Modals full screen on mobile */
+  .modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    max-height: 92vh !important;
+    border-radius: 18px 18px 0 0 !important;
+    padding: 20px 18px 28px !important;
+  }
+  .modal-overlay { align-items: flex-end !important; }
+  .form-group input,
+  .form-group textarea,
+  .form-group select { font-size: 16px !important; padding: 11px 12px !important; }
+  .modal h3 { font-size: 16px; margin-bottom: 16px; }
+  .btn-cancel, .btn-primary, .btn-orange { padding: 11px 18px; font-size: 14px; border-radius: 9px; }
+
+  /* Settings responsive */
+  .settings-row { flex-direction: column; }
+  .emp-row { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .emp-row-actions { width: 100%; }
+
+  /* Bottom nav */
+  #bottomNav {
+    display: flex !important;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 64px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    z-index: 99;
+    padding: 0 4px;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .bnav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    cursor: pointer;
+    border-radius: 10px;
+    margin: 6px 2px;
+    transition: background .13s;
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .bnav-item:active { background: var(--card); }
+  .bnav-item.active { background: rgba(79,142,247,.1); }
+  .bnav-item .bnav-icon { font-size: 20px; line-height: 1; }
+  .bnav-item .bnav-label { font-size: 10px; font-weight: 600; color: var(--muted); }
+  .bnav-item.active .bnav-label { color: var(--accent); }
+  .bnav-item.active-peer .bnav-label { color: var(--green); }
+  .bnav-item.active-special .bnav-label { color: var(--accent2); }
+  .bnav-badge {
+    position: absolute; top: 4px; right: calc(50% - 18px);
+    background: var(--red); color: #fff;
+    border-radius: 20px; font-size: 9px; padding: 1px 5px; font-weight: 700;
+    min-width: 16px; text-align: center;
+  }
+
+  /* Mobile filter drawer */
+  #filterDrawer {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 150;
+  }
+  #filterDrawer.open { display: block; }
+  #filterDrawerBg {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,.6);
+    backdrop-filter: blur(3px);
+  }
+  #filterDrawerPanel {
+    position: absolute;
+    bottom: 64px; left: 0; right: 0;
+    background: var(--surface);
+    border-radius: 18px 18px 0 0;
+    border-top: 1px solid var(--border);
+    padding: 16px 14px 20px;
+    max-height: 75vh;
+    overflow-y: auto;
+  }
+  #filterDrawerPanel .sidebar-label { margin-bottom: 8px; }
+  #filterDrawerPanel .filter-btn { padding: 11px 12px; font-size: 13px; border-radius: 9px; }
+  #filterDrawerPanel .stat-grid { margin-bottom: 12px; }
+  #filterDrawerPanel .stat-box { padding: 10px 12px; }
+  #filterDrawerPanel .stat-box .num { font-size: 20px; }
+}
+
+/* Hide bottom nav on desktop */
+#bottomNav { display: none; }
+#filterDrawer { display: none; }
+
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">HALAR</div>
+    <div class="login-tagline">TASK MANAGER</div>
+    <div class="login-label">Your PIN</div>
+    <input class="login-input" type="password" id="loginPin" maxlength="10" placeholder="••••" autocomplete="off">
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign In →</button>
+    <div class="login-error" id="loginError"></div>
+    <div class="login-status connecting" id="loginStatus">⏳ Connecting to server…</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appShell" style="display:none;flex-direction:column;height:100vh;">
+  <header>
+    <div class="logo">HALAR <span>TM</span></div>
+    <div class="live-dot"></div>
+    <div class="tabs-bar" id="tabsBar"></div>
+    <div class="header-right">
+      <button class="bell-btn" onclick="showReminders()" title="Reminders">🔔<span id="bellBadge"></span></button>
+      <div class="user-chip"><span class="uname" id="headerUserName"></span><span class="urole" id="headerUserRole"></span></div>
+      <button class="hdr-btn admin-only" onclick="openModal('empModal')">+ Employee</button>
+      <button class="hdr-btn emp-only" onclick="openModal('changePinModal')" style="color:var(--accent)">🔑 PIN</button>
+      <button class="hdr-btn danger" onclick="logout()">Sign Out</button>
+    </div>
+  </header>
+  <main>
+    <aside class="sidebar">
+      <div class="sidebar-label">My Stats</div>
+      <div class="stat-grid">
+        <div class="stat-box todo"><div class="num" id="statTodo">0</div><div class="lbl">To Do</div></div>
+        <div class="stat-box prog"><div class="num" id="statInProg">0</div><div class="lbl">In Progress</div></div>
+        <div class="stat-box done"><div class="num" id="statDone">0</div><div class="lbl">Done</div></div>
+        <div class="stat-box fu"><div class="num" id="statFollowup">0</div><div class="lbl">Follow-ups</div></div>
+      </div>
+      <div class="stat-box od" style="margin-top:2px"><div class="num" id="statOverdue">0</div><div class="lbl">Overdue</div></div>
+      <hr class="sidebar-divider">
+      <div class="sidebar-label">Filter</div>
+      <button class="filter-btn active" data-filter="all" onclick="setFilter('all',this)"><span class="filter-dot" style="background:var(--muted)"></span>All Tasks</button>
+      <button class="filter-btn" data-filter="unread" onclick="setFilter('unread',this)"><span class="filter-dot" style="background:var(--accent)"></span>Unacknowledged</button>
+      <button class="filter-btn" data-filter="todo" onclick="setFilter('todo',this)"><span class="filter-dot" style="background:var(--yellow)"></span>To Do</button>
+      <button class="filter-btn" data-filter="inprogress" onclick="setFilter('inprogress',this)"><span class="filter-dot" style="background:var(--accent)"></span>In Progress</button>
+      <button class="filter-btn" data-filter="done" onclick="setFilter('done',this)"><span class="filter-dot" style="background:var(--green)"></span>Completed</button>
+      <button class="filter-btn" data-filter="followup" onclick="setFilter('followup',this)"><span class="filter-dot" style="background:var(--accent2)"></span>Self Follow-ups</button>
+      <button class="filter-btn" data-filter="high" onclick="setFilter('high',this)"><span class="filter-dot" style="background:var(--red)"></span>High Priority</button>
+      <button class="filter-btn" data-filter="overdue" onclick="setFilter('overdue',this)"><span class="filter-dot" style="background:var(--red)"></span>Overdue</button>
+    </aside>
+    <section class="content">
+      <div class="content-header">
+        <div class="employee-info"><h2 id="empName">—</h2><p id="empRole"></p></div>
+        <div id="contentHeaderBtns">
+          <button class="btn-followup" onclick="openModal('followupModal')" style="margin-right:6px">🔁 Self Follow-up</button>
+          <button class="btn-assign" onclick="openAssignModal()">📤 Assign to Colleague</button>
+        </div>
+      </div>
+      <div class="task-list" id="taskList"><div class="empty-state"><div class="icon">⏳</div><p>Loading…</p></div></div>
+    </section>
+  </main>
+</div>
+
+<!-- BOTTOM NAV (mobile only) -->
+<div id="bottomNav">
+  <div class="bnav-item active" id="bnav-tasks" onclick="mobileNav('tasks')">
+    <span class="bnav-icon">📋</span>
+    <span class="bnav-label">My Tasks</span>
+    <span class="bnav-badge" id="bnavBadgeTasks" style="display:none"></span>
+  </div>
+  <div class="bnav-item" id="bnav-assigned" onclick="mobileNav('assigned_by_me')">
+    <span class="bnav-icon">📤</span>
+    <span class="bnav-label">Assigned</span>
+    <span class="bnav-badge" id="bnavBadgeAssigned" style="display:none"></span>
+  </div>
+  <div class="bnav-item admin-only" id="bnav-team" onclick="mobileNav('manage_emp')" style="display:none">
+    <span class="bnav-icon">👥</span>
+    <span class="bnav-label">Team</span>
+  </div>
+  <div class="bnav-item" id="bnav-filter" onclick="toggleFilterDrawer()">
+    <span class="bnav-icon">🔍</span>
+    <span class="bnav-label">Filter</span>
+  </div>
+  <div class="bnav-item admin-only" id="bnav-settings" onclick="mobileNav('settings')" style="display:none">
+    <span class="bnav-icon">⚙️</span>
+    <span class="bnav-label">Settings</span>
+  </div>
+  <div class="bnav-item emp-only" id="bnav-pin" onclick="openModal('changePinModal')" style="display:none">
+    <span class="bnav-icon">🔑</span>
+    <span class="bnav-label">My PIN</span>
+  </div>
+</div>
+
+<!-- FILTER DRAWER (mobile only) -->
+<div id="filterDrawer">
+  <div id="filterDrawerBg" onclick="toggleFilterDrawer()"></div>
+  <div id="filterDrawerPanel">
+    <div class="sidebar-label">Stats</div>
+    <div class="stat-grid" style="margin-bottom:12px">
+      <div class="stat-box todo"><div class="num" id="statTodo2">0</div><div class="lbl">To Do</div></div>
+      <div class="stat-box prog"><div class="num" id="statInProg2">0</div><div class="lbl">In Progress</div></div>
+      <div class="stat-box done"><div class="num" id="statDone2">0</div><div class="lbl">Done</div></div>
+      <div class="stat-box od"><div class="num" id="statOverdue2">0</div><div class="lbl">Overdue</div></div>
+    </div>
+    <div class="sidebar-label">Filter Tasks</div>
+    <button class="filter-btn active" data-filter2="all" onclick="setFilterMobile('all',this)"><span class="filter-dot" style="background:var(--muted)"></span>All Tasks</button>
+    <button class="filter-btn" data-filter2="unread" onclick="setFilterMobile('unread',this)"><span class="filter-dot" style="background:var(--accent)"></span>Unacknowledged</button>
+    <button class="filter-btn" data-filter2="todo" onclick="setFilterMobile('todo',this)"><span class="filter-dot" style="background:var(--yellow)"></span>To Do</button>
+    <button class="filter-btn" data-filter2="inprogress" onclick="setFilterMobile('inprogress',this)"><span class="filter-dot" style="background:var(--accent)"></span>In Progress</button>
+    <button class="filter-btn" data-filter2="done" onclick="setFilterMobile('done',this)"><span class="filter-dot" style="background:var(--green)"></span>Completed</button>
+    <button class="filter-btn" data-filter2="followup" onclick="setFilterMobile('followup',this)"><span class="filter-dot" style="background:var(--accent2)"></span>Self Follow-ups</button>
+    <button class="filter-btn" data-filter2="high" onclick="setFilterMobile('high',this)"><span class="filter-dot" style="background:var(--red)"></span>High Priority</button>
+    <button class="filter-btn" data-filter2="overdue" onclick="setFilterMobile('overdue',this)"><span class="filter-dot" style="background:var(--red)"></span>Overdue</button>
+  </div>
+</div>
+<div class="modal-overlay" id="reminderModal">
+  <div class="modal" style="border-top:3px solid var(--accent);max-width:420px">
+    <h3 style="color:var(--accent);display:flex;align-items:center;justify-content:space-between">
+      <span>🔔 Daily Briefing</span>
+    </h3>
+    <div id="reminderBody"></div>
+    <div class="modal-actions" style="margin-top:16px">
+      <button class="btn-primary" style="width:100%;padding:11px" onclick="closeModal('reminderModal')">Start My Day →</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="assignModal">
+  <div class="modal">
+    <h3>📤 Assign Task to Colleague</h3>
+    <div class="form-group"><label>Assign To *</label><select id="assignToEmp"></select></div>
+    <div class="form-group"><label>Task Title *</label><input type="text" id="taskTitle" placeholder="Task title…"></div>
+    <div class="form-group"><label>Description / Comment</label><textarea id="taskComment" rows="3" placeholder="Instructions, notes…"></textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group"><label>Priority</label><select id="taskPriority"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></div>
+      <div class="form-group"><label>Due Date</label><input type="date" id="taskDue"></div>
+    </div>
+    <div class="form-group"><label>Assigned By</label><input type="text" id="assignedBy"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('assignModal')">Cancel</button>
+      <button class="btn-primary" id="saveTaskBtn" onclick="saveTask()">Assign Task</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="followupModal">
+  <div class="modal">
+    <h3>🔁 Self Follow-up Task</h3>
+    <div class="form-group"><label>Title *</label><input type="text" id="fuTitle" placeholder="What to follow up on?"></div>
+    <div class="form-group"><label>Note</label><textarea id="fuNote" rows="3" placeholder="Details…"></textarea></div>
+    <div class="form-group"><label>Due Date</label><input type="date" id="fuDue"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('followupModal')">Cancel</button>
+      <button class="btn-orange" id="saveFuBtn" onclick="saveSelfFollowup()">Add Follow-up</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="commentModal">
+  <div class="modal">
+    <h3>💬 Add Comment</h3>
+    <div class="form-group"><label>Your comment or update</label><textarea id="commentText" rows="4" placeholder="e.g. Called client, waiting for response…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('commentModal')">Cancel</button>
+      <button class="btn-primary" onclick="saveComment()">Add Comment</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="taskFollowupModal">
+  <div class="modal">
+    <h3>🔁 Add Follow-up to Task</h3>
+    <div class="form-group"><label>Follow-up action needed</label><textarea id="taskFollowupText" rows="3" placeholder="e.g. Check back with client on Monday…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('taskFollowupModal')">Cancel</button>
+      <button class="btn-orange" onclick="saveTaskFollowup()">Add Follow-up</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="editTaskModal">
+  <div class="modal">
+    <h3>✏️ Edit Task</h3>
+    <div id="editTaskContext" style="font-size:11px;color:var(--muted);margin-bottom:12px;padding:7px 10px;background:var(--bg);border-radius:6px;border:1px solid var(--border)"></div>
+    <div class="form-group"><label>Task Title *</label><input type="text" id="editTaskTitle" placeholder="Task title…"></div>
+    <div class="form-group"><label>Description / Comment</label><textarea id="editTaskComment" rows="3" placeholder="Instructions, notes…"></textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group"><label>Priority</label>
+        <select id="editTaskPriority">
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Due Date</label><input type="date" id="editTaskDue"></div>
+    </div>
+    <div class="form-group"><label>Assigned By</label><input type="text" id="editTaskAssignedBy" placeholder="Name…"></div>
+    <div class="modal-error" id="editTaskError"></div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:4px">📝 Any changes will be logged in the task activity.</div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('editTaskModal')">Cancel</button>
+      <button class="btn-primary" onclick="saveEditTask()">Save Changes</button>
+    </div>
+  </div>
+</div>
+  <div class="modal">
+    <h3>✅ Mark as Complete</h3>
+    <div class="form-group"><label>Completion Note</label><textarea id="completeNote" rows="3" placeholder="What was done?"></textarea></div>
+    <div class="form-group"><label>Completed By</label><input type="text" id="completedBy"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('completeModal')">Cancel</button>
+      <button class="btn-primary" style="background:var(--green)" onclick="confirmComplete()">Mark Complete</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="statusModal">
+  <div class="modal">
+    <h3>🔄 Update Status</h3>
+    <div class="form-group"><label>New Status</label><select id="newStatus"><option value="todo">To Do</option><option value="inprogress">In Progress</option><option value="done">Done</option></select></div>
+    <div class="form-group"><label>Update Note</label><textarea id="statusNote" rows="2" placeholder="Optional note…"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('statusModal')">Cancel</button>
+      <button class="btn-primary" onclick="confirmStatus()">Update</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="empModal">
+  <div class="modal">
+    <h3>👤 Add Employee</h3>
+    <div class="form-group"><label>Full Name *</label><input type="text" id="newEmpName" placeholder="Full name…"></div>
+    <div class="form-group"><label>Role / Department</label><input type="text" id="newEmpRole" placeholder="e.g. Developer, Finance…"></div>
+    <div class="form-group"><label>Set PIN * (min 3 digits)</label><input type="password" id="newEmpPin" placeholder="e.g. 5521" maxlength="10"></div>
+    <div class="form-group"><label>Confirm PIN *</label><input type="password" id="newEmpPinConfirm" placeholder="Repeat PIN" maxlength="10"></div>
+    <div class="modal-error" id="empModalError"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('empModal')">Cancel</button>
+      <button class="btn-primary" id="saveEmpBtn" onclick="saveEmployee()">Add Employee</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="editEmpModal">
+  <div class="modal">
+    <h3>✏️ Edit Employee</h3>
+    <div class="form-group"><label>Full Name *</label><input type="text" id="editEmpName"></div>
+    <div class="form-group"><label>Role / Department</label><input type="text" id="editEmpRole"></div>
+    <div class="modal-error" id="editEmpError"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('editEmpModal')">Cancel</button>
+      <button class="btn-primary" onclick="saveEditEmp()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="resetPinModal">
+  <div class="modal">
+    <h3>🔑 Reset PIN for <span id="resetPinEmpName" style="color:var(--accent)"></span></h3>
+    <div class="form-group"><label>New PIN *</label><input type="password" id="resetPinNew" placeholder="New PIN" maxlength="10"></div>
+    <div class="form-group"><label>Confirm PIN *</label><input type="password" id="resetPinConfirm" placeholder="Repeat PIN" maxlength="10"></div>
+    <div class="modal-error" id="resetPinError"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('resetPinModal')">Cancel</button>
+      <button class="btn-primary" onclick="saveResetPin()">Reset PIN</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="changePinModal">
+  <div class="modal">
+    <h3>🔑 Change My PIN</h3>
+    <div class="form-group"><label>Current PIN</label><input type="password" id="oldPin" maxlength="10"></div>
+    <div class="form-group"><label>New PIN</label><input type="password" id="newPin" maxlength="10"></div>
+    <div class="form-group"><label>Confirm New PIN</label><input type="password" id="newPinConfirm" maxlength="10"></div>
+    <div class="modal-error" id="changePinError"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('changePinModal')">Cancel</button>
+      <button class="btn-primary" onclick="saveChangePin()">Save PIN</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════════
+//  SUPABASE CONFIG
+// ══════════════════════════════════════════════════════════
+const SUPABASE_URL  = 'https://jaqgxojceqbckreatvty.supabase.co';
+const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImphcWd4b2pjZXFiY2tyZWF0dnR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2NjI1NzMsImV4cCI6MjA5MjIzODU3M30.qAzSJlObuDvRLkRyWsBW8bgXzn2SAUmLJvGcA1wZE3c';
+let ADMIN_PIN = '7869'; // default — overwritten by value stored in Supabase settings
+
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── State ─────────────────────────────────────────────────
+let currentUser = null;
+let employees   = [];
+let tasks       = [];
+let activeEmpId = null;
+let activeFilter= 'all';
+let activeView  = 'tasks';
+let pendingCompleteId    = null;
+let pendingStatusId      = null;
+let pendingCommentTaskId = null;
+let pendingEditEmpId     = null;
+let reminderShown        = false;
+
+// ── Helpers ───────────────────────────────────────────────
+function ts(){ return new Date().toLocaleString('en-KE',{dateStyle:'medium',timeStyle:'short'}); }
+function today(){ return new Date().toISOString().split('T')[0]; }
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+
+// ══════════════════════════════════════════════════════════
+//  INIT — load data then connect realtime
+// ══════════════════════════════════════════════════════════
+async function init(){
+  const st = document.getElementById('loginStatus');
+  try {
+    // Load settings (admin PIN)
+    const { data: settings } = await sb.from('settings').select('*');
+    if(settings && settings.length){
+      const pinSetting = settings.find(s=>s.key==='admin_pin');
+      if(pinSetting && pinSetting.value) ADMIN_PIN = pinSetting.value;
+    }
+
+    // Load employees
+    const { data: emps, error: e1 } = await sb.from('employees').select('*').order('created_at');
+    if(e1) throw e1;
+    employees = emps || [];
+
+    // Load tasks
+    const { data: tks, error: e2 } = await sb.from('tasks').select('*').order('created_at', {ascending:false});
+    if(e2) throw e2;
+    tasks = tks || [];
+
+    st.className = 'login-status ready';
+    st.innerHTML = '✅ Connected! Enter your PIN to sign in.<br><small>First time? Login as Admin to add employees.</small>';
+    document.getElementById('loginPin').focus();
+
+    // Realtime subscriptions
+    sb.channel('employees-ch').on('postgres_changes',{event:'*',schema:'public',table:'employees'},()=>{ loadEmployees(); }).subscribe();
+    sb.channel('tasks-ch').on('postgres_changes',{event:'*',schema:'public',table:'tasks'},()=>{ loadTasks(); }).subscribe();
+    sb.channel('settings-ch').on('postgres_changes',{event:'*',schema:'public',table:'settings'},async()=>{
+      const { data } = await sb.from('settings').select('*');
+      if(data){ const p=data.find(s=>s.key==='admin_pin'); if(p) ADMIN_PIN=p.value; }
+    }).subscribe();
+
+  } catch(err){
+    st.className = 'login-status error';
+    st.innerHTML = '❌ Connection failed: ' + (err.message||err.code||JSON.stringify(err)) + '<br>Check your internet connection and try refreshing.';
+  }
+}
+
+async function loadEmployees(){
+  const { data } = await sb.from('employees').select('*').order('created_at');
+  employees = data || [];
+  renderTabs(); renderContent();
+}
+
+async function loadTasks(){
+  const { data } = await sb.from('tasks').select('*').order('created_at',{ascending:false});
+  tasks = data || [];
+  renderTabs(); renderContent();
+  if(!reminderShown && currentUser){ checkReminders(); reminderShown=true; }
+}
+
+// ══════════════════════════════════════════════════════════
+//  LOGIN / LOGOUT
+// ══════════════════════════════════════════════════════════
+async function doLogin(){
+  const pin = document.getElementById('loginPin').value.trim();
+  const err = document.getElementById('loginError');
+  err.textContent = '';
+  if(!pin){ err.textContent='Please enter your PIN.'; return; }
+
+  if(pin === ADMIN_PIN){
+    currentUser = {id:'__admin__', name:'Admin', role:'Administrator', isAdmin:true};
+    showApp(); return;
+  }
+
+  const match = employees.find(e => e.pin === pin);
+  if(!match){ err.textContent='❌ Incorrect PIN. Please try again.'; document.getElementById('loginPin').value=''; return; }
+
+  currentUser = {id:match.id, name:match.name, role:match.role, isAdmin:false};
+  activeEmpId = match.id;
+  showApp();
+}
+
+function logout(){
+  currentUser=null; activeEmpId=null; activeFilter='all'; activeView='tasks'; reminderShown=false;
+  document.getElementById('loginPin').value='';
+  document.getElementById('loginError').textContent='';
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('appShell').style.display='none';
+}
+
+function showApp(){
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('appShell').style.display='flex';
+  document.getElementById('headerUserName').textContent=currentUser.name;
+  document.getElementById('headerUserRole').textContent=currentUser.isAdmin?'👑 Admin':currentUser.role;
+  document.querySelectorAll('.admin-only').forEach(el=>el.style.display=currentUser.isAdmin?'':'none');
+  document.querySelectorAll('.emp-only').forEach(el=>el.style.display=!currentUser.isAdmin?'':'none');
+  // mobile bottom nav: show correct items
+  const bnTeam    = document.getElementById('bnav-team');
+  const bnSetting = document.getElementById('bnav-settings');
+  const bnPin     = document.getElementById('bnav-pin');
+  if(bnTeam)    bnTeam.style.display    = currentUser.isAdmin ? '' : 'none';
+  if(bnSetting) bnSetting.style.display = currentUser.isAdmin ? '' : 'none';
+  if(bnPin)     bnPin.style.display     = !currentUser.isAdmin ? '' : 'none';
+  renderTabs(); renderContent();
+  // Always show daily briefing on login
+  setTimeout(()=>{ if(!reminderShown){ checkReminders(); reminderShown=true; } }, 800);
+}
+
+// ══════════════════════════════════════════════════════════
+//  REMINDERS
+// ══════════════════════════════════════════════════════════
+function checkReminders(){
+  if(!currentUser) return;
+
+  const now       = new Date();
+  const todayStr  = today();
+
+  // Format full date and time
+  const dateStr = now.toLocaleDateString('en-KE',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const timeStr = now.toLocaleTimeString('en-KE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+
+  // Build date/time header
+  let html = `<div class="rem-datetime">
+    <div class="rem-date">📆 ${dateStr}</div>
+    <div class="rem-time" id="reminderClock">${timeStr}</div>
+  </div>`;
+
+  // Admin sees summary across all employees
+  if(currentUser.isAdmin){
+    const allOverdue  = tasks.filter(t=>t.due_date&&t.due_date<todayStr&&t.status!=='done');
+    const allDueToday = tasks.filter(t=>t.due_date&&t.due_date===todayStr&&t.status!=='done');
+    const totalPending= tasks.filter(t=>t.status!=='done').length;
+
+    html += `<div class="rem-admin-summary">
+      <div class="rem-summary-row"><span>📋 Total Pending Tasks</span><b>${totalPending}</b></div>
+      <div class="rem-summary-row${allOverdue.length>0?' warn':''}"><span>🔴 Overdue</span><b>${allOverdue.length}</b></div>
+      <div class="rem-summary-row${allDueToday.length>0?' caution':''}"><span>🟡 Due Today</span><b>${allDueToday.length}</b></div>
+      <div class="rem-summary-row"><span>👥 Employees</span><b>${employees.length}</b></div>
+    </div>`;
+
+    if(allOverdue.length){
+      html+=`<div class="rem-heading overdue">⚠️ Overdue Tasks</div>`;
+      allOverdue.slice(0,5).forEach(t=>{
+        const emp=employees.find(e=>e.id===t.emp_id);
+        html+=`<div class="rem-item">🔴 ${esc(t.title)} <span style="color:var(--muted);font-size:10px">— ${esc(emp?emp.name:'')}</span></div>`;
+      });
+      if(allOverdue.length>5) html+=`<div style="font-size:11px;color:var(--muted);padding:4px 2px">+ ${allOverdue.length-5} more overdue tasks</div>`;
+    }
+    if(allDueToday.length){
+      html+=`<div class="rem-heading today">📅 Due Today</div>`;
+      allDueToday.slice(0,5).forEach(t=>{
+        const emp=employees.find(e=>e.id===t.emp_id);
+        html+=`<div class="rem-item">🟡 ${esc(t.title)} <span style="color:var(--muted);font-size:10px">— ${esc(emp?emp.name:'')}</span></div>`;
+      });
+    }
+    if(!allOverdue.length&&!allDueToday.length){
+      html+=`<div class="rem-all-clear">✅ No overdue or due-today tasks across the team!</div>`;
+    }
+  } else {
+    // Employee sees their own tasks
+    const mine     = tasks.filter(t=>t.emp_id===currentUser.id&&t.status!=='done');
+    const overdue  = mine.filter(t=>t.due_date&&t.due_date<todayStr);
+    const dueToday = mine.filter(t=>t.due_date&&t.due_date===todayStr);
+    const pending  = mine.length;
+
+    html += `<div class="rem-admin-summary">
+      <div class="rem-summary-row"><span>📋 My Pending Tasks</span><b>${pending}</b></div>
+      <div class="rem-summary-row${overdue.length>0?' warn':''}"><span>🔴 Overdue</span><b>${overdue.length}</b></div>
+      <div class="rem-summary-row${dueToday.length>0?' caution':''}"><span>🟡 Due Today</span><b>${dueToday.length}</b></div>
+    </div>`;
+
+    if(overdue.length){
+      html+=`<div class="rem-heading overdue">⚠️ Overdue</div>`;
+      overdue.forEach(t=>{ html+=`<div class="rem-item">🔴 ${esc(t.title)}</div>`; });
+    }
+    if(dueToday.length){
+      html+=`<div class="rem-heading today">📅 Due Today</div>`;
+      dueToday.forEach(t=>{ html+=`<div class="rem-item">🟡 ${esc(t.title)}</div>`; });
+    }
+    if(!overdue.length&&!dueToday.length){
+      html+=`<div class="rem-all-clear">✅ You're all caught up — no overdue or due-today tasks!</div>`;
+    }
+
+    // Update bell badge
+    const urgent = overdue.length + dueToday.length;
+    const b=document.getElementById('bellBadge');
+    if(urgent>0){ b.textContent=urgent; b.style.display='flex'; } else b.style.display='none';
+  }
+
+  document.getElementById('reminderBody').innerHTML=html;
+  openModal('reminderModal');
+
+  // Live clock inside the modal — updates every second
+  const clockInterval = setInterval(()=>{
+    const el = document.getElementById('reminderClock');
+    if(!el){ clearInterval(clockInterval); return; }
+    el.textContent = new Date().toLocaleTimeString('en-KE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  }, 1000);
+}
+
+function showReminders(){ reminderShown=false; checkReminders(); }
+
+// ══════════════════════════════════════════════════════════
+//  TABS
+// ══════════════════════════════════════════════════════════
+function renderTabs(){
+  const bar=document.getElementById('tabsBar');
+  if(!bar||!currentUser) return;
+  const visible=currentUser.isAdmin?employees:employees.filter(e=>e.id===currentUser.id);
+  let html=visible.map(e=>{
+    const pending=tasks.filter(t=>t.emp_id===e.id&&t.status!=='done').length;
+    return `<div class="tab${e.id===activeEmpId&&activeView==='tasks'?' active':''}" onclick="selectEmployee('${e.id}')">
+      ${esc(e.name)}${pending>0?`<span class="badge">${pending}</span>`:''}
+    </div>`;
+  }).join('');
+  const myAssigned=tasks.filter(t=>t.assigned_by_id===currentUser.id&&t.emp_id!==currentUser.id);
+  html+=`<div class="tab tab-peer${activeView==='assigned_by_me'?' active':''}" onclick="showView('assigned_by_me')">
+    📤 Assigned by Me${myAssigned.filter(t=>t.status!=='done').length>0?`<span class="badge" style="background:var(--green)">${myAssigned.filter(t=>t.status!=='done').length}</span>`:''}
+  </div>`;
+  if(currentUser.isAdmin){
+    const od=tasks.filter(t=>t.due_date&&t.due_date<today()&&t.status!=='done').length;
+    html+=`<div class="tab tab-special${activeView==='overdue_all'?' active':''}" onclick="showView('overdue_all')">🔴 All Overdue${od>0?`<span class="badge" style="background:var(--red)">${od}</span>`:''}</div>`;
+    html+=`<div class="tab tab-special${activeView==='manage_emp'?' active':''}" onclick="showView('manage_emp')">⚙️ Manage Team</div>`;
+    html+=`<div class="tab tab-special${activeView==='settings'?' active':''}" onclick="showView('settings')">🔧 Settings</div>`;
+  }
+  bar.innerHTML=html;
+}
+
+// ══════════════════════════════════════════════════════════
+//  RENDER CONTENT
+// ══════════════════════════════════════════════════════════
+function renderContent(){
+  if(!currentUser) return;
+  if(activeView==='overdue_all'){ renderAllOverdue(); updateMobileStats(); return; }
+  if(activeView==='manage_emp'){ renderManageEmp(); updateMobileStats(); return; }
+  if(activeView==='assigned_by_me'){ renderAssignedByMe(); updateMobileStats(); return; }
+  if(activeView==='settings'){ renderSettings(); updateMobileStats(); return; }
+  renderTaskView(); updateMobileStats();
+}
+
+function renderTaskView(){
+  if(!currentUser.isAdmin) activeEmpId=currentUser.id;
+  const emp=employees.find(e=>e.id===activeEmpId);
+  document.getElementById('empName').textContent=emp?emp.name:(currentUser.isAdmin?'Select Employee':'—');
+  document.getElementById('empRole').textContent=emp?emp.role||'':'';
+  document.getElementById('contentHeaderBtns').style.display='';
+
+  let filtered=tasks.filter(t=>t.emp_id===activeEmpId);
+  const todayStr=today();
+  if(activeFilter==='todo') filtered=filtered.filter(t=>t.status==='todo');
+  else if(activeFilter==='inprogress') filtered=filtered.filter(t=>t.status==='inprogress');
+  else if(activeFilter==='done') filtered=filtered.filter(t=>t.status==='done');
+  else if(activeFilter==='followup') filtered=filtered.filter(t=>t.is_followup);
+  else if(activeFilter==='high') filtered=filtered.filter(t=>t.priority==='high');
+  else if(activeFilter==='overdue') filtered=filtered.filter(t=>t.due_date&&t.due_date<todayStr&&t.status!=='done');
+  else if(activeFilter==='unread') filtered=filtered.filter(t=>!t.acknowledged_at&&t.status!=='done');
+
+  const empTasks=tasks.filter(t=>t.emp_id===activeEmpId);
+  document.getElementById('statTodo').textContent=empTasks.filter(t=>t.status==='todo').length;
+  document.getElementById('statInProg').textContent=empTasks.filter(t=>t.status==='inprogress').length;
+  document.getElementById('statDone').textContent=empTasks.filter(t=>t.status==='done').length;
+  document.getElementById('statFollowup').textContent=empTasks.filter(t=>t.is_followup).length;
+  document.getElementById('statOverdue').textContent=empTasks.filter(t=>t.due_date&&t.due_date<todayStr&&t.status!=='done').length;
+
+  const p={high:0,medium:1,low:2};
+  filtered.sort((a,b)=>{ if(a.status==='done'&&b.status!=='done') return 1; if(b.status==='done'&&a.status!=='done') return -1; return (p[a.priority]||1)-(p[b.priority]||1); });
+  document.getElementById('taskList').innerHTML=filtered.length?filtered.map(t=>taskCard(t)).join(''):emptyState(activeFilter==='all'?'🎉':'🔍',activeFilter==='all'?'No tasks yet':'No tasks match this filter');
+}
+
+function renderAllOverdue(){
+  document.getElementById('empName').textContent='All Overdue Tasks';
+  document.getElementById('empRole').textContent='Across all employees';
+  document.getElementById('contentHeaderBtns').style.display='none';
+  const od=tasks.filter(t=>t.due_date&&t.due_date<today()&&t.status!=='done');
+  if(!od.length){ document.getElementById('taskList').innerHTML=emptyState('✅','No overdue tasks!'); return; }
+  const grouped={};
+  od.forEach(t=>{ if(!grouped[t.emp_id]) grouped[t.emp_id]=[]; grouped[t.emp_id].push(t); });
+  let html='';
+  Object.entries(grouped).forEach(([eid,et])=>{
+    const emp=employees.find(e=>e.id===eid);
+    html+=`<div class="group-header">👤 ${esc(emp?emp.name:'Unknown')} <span class="group-count">${et.length} overdue</span></div>`;
+    html+=et.map(t=>taskCard(t,true)).join('');
+  });
+  document.getElementById('taskList').innerHTML=html;
+}
+
+function renderAssignedByMe(){
+  document.getElementById('empName').textContent='Assigned by Me';
+  document.getElementById('empRole').textContent='Tasks you sent to colleagues — live status';
+  document.getElementById('contentHeaderBtns').style.display='';
+  const mine=tasks.filter(t=>t.assigned_by_id===currentUser.id&&t.emp_id!==currentUser.id);
+  const p={high:0,medium:1,low:2};
+  mine.sort((a,b)=>{ if(a.status==='done'&&b.status!=='done') return 1; if(b.status==='done'&&a.status!=='done') return -1; return (p[a.priority]||1)-(p[b.priority]||1); });
+  document.getElementById('statTodo').textContent=mine.filter(t=>t.status==='todo').length;
+  document.getElementById('statInProg').textContent=mine.filter(t=>t.status==='inprogress').length;
+  document.getElementById('statDone').textContent=mine.filter(t=>t.status==='done').length;
+  document.getElementById('statFollowup').textContent=mine.filter(t=>t.followups&&t.followups.length>0).length;
+  document.getElementById('statOverdue').textContent=mine.filter(t=>t.due_date&&t.due_date<today()&&t.status!=='done').length;
+  document.getElementById('taskList').innerHTML=mine.length?mine.map(t=>taskCard(t,true,'assigner')).join(''):emptyState('📤','No tasks assigned to colleagues yet');
+}
+
+function renderManageEmp(){
+  document.getElementById('empName').textContent='Manage Team';
+  document.getElementById('empRole').textContent='Add, edit, remove employees · Reset PINs';
+  document.getElementById('contentHeaderBtns').style.display='none';
+  if(!employees.length){ document.getElementById('taskList').innerHTML=emptyState('👤','No employees added yet'); return; }
+  const rows=employees.map(e=>{
+    const et=tasks.filter(t=>t.emp_id===e.id);
+    return `<div class="emp-row">
+      <div class="emp-row-info">
+        <div class="emp-row-name">${esc(e.name)}</div>
+        <div class="emp-row-role">${esc(e.role||'No role')} · <span style="color:var(--yellow)">${et.filter(t=>t.status!=='done').length} pending</span> · <span style="color:var(--green)">${et.filter(t=>t.status==='done').length} done</span></div>
+      </div>
+      <div class="emp-row-actions">
+        <button class="task-action-btn" onclick="openEditEmp('${e.id}')">✏️ Edit</button>
+        <button class="task-action-btn" onclick="openResetPin('${e.id}')">🔑 Reset PIN</button>
+        <button class="task-action-btn danger" onclick="removeEmployee('${e.id}')">Remove</button>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('taskList').innerHTML=`<div class="emp-manage-list">${rows}</div>`;
+}
+
+function renderSettings(){
+  document.getElementById('empName').textContent='Settings';
+  document.getElementById('empRole').textContent='Admin configuration · Change Admin PIN';
+  document.getElementById('contentHeaderBtns').style.display='none';
+  document.getElementById('taskList').innerHTML=`
+    <div class="settings-panel">
+      <div class="settings-section">
+        <div class="settings-section-title">🔐 Admin PIN</div>
+        <div class="settings-section-desc">Change the Admin PIN used to access all employees' tasks and manage the system. Keep this secret — only share with trusted admins.</div>
+        <div class="settings-row">
+          <div class="form-group" style="margin-bottom:0;flex:1">
+            <label>Current Admin PIN</label>
+            <input type="password" id="settingsCurrPin" placeholder="Enter current PIN" maxlength="10">
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="form-group" style="margin-bottom:0;flex:1">
+            <label>New Admin PIN *</label>
+            <input type="password" id="settingsNewPin" placeholder="New PIN (min 3 digits)" maxlength="10">
+          </div>
+          <div class="form-group" style="margin-bottom:0;flex:1">
+            <label>Confirm New PIN *</label>
+            <input type="password" id="settingsNewPin2" placeholder="Repeat new PIN" maxlength="10">
+          </div>
+        </div>
+        <div class="modal-error" id="settingsPinError" style="margin-top:8px"></div>
+        <button class="btn-primary" onclick="saveAdminPin()" style="margin-top:12px">🔑 Update Admin PIN</button>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">ℹ️ System Info</div>
+        <div class="settings-info-row"><span>Total Employees</span><b>${employees.length}</b></div>
+        <div class="settings-info-row"><span>Total Tasks</span><b>${tasks.length}</b></div>
+        <div class="settings-info-row"><span>Pending Tasks</span><b style="color:var(--yellow)">${tasks.filter(t=>t.status!=='done').length}</b></div>
+        <div class="settings-info-row"><span>Completed Tasks</span><b style="color:var(--green)">${tasks.filter(t=>t.status==='done').length}</b></div>
+        <div class="settings-info-row"><span>Overdue Tasks</span><b style="color:var(--red)">${tasks.filter(t=>t.due_date&&t.due_date<today()&&t.status!=='done').length}</b></div>
+        <div class="settings-info-row"><span>Database</span><b style="color:var(--accent)">Supabase ✅</b></div>
+      </div>
+    </div>`;
+}
+
+async function saveAdminPin(){
+  const curr = document.getElementById('settingsCurrPin').value.trim();
+  const np   = document.getElementById('settingsNewPin').value.trim();
+  const np2  = document.getElementById('settingsNewPin2').value.trim();
+  const errEl= document.getElementById('settingsPinError');
+  errEl.textContent='';
+  if(curr !== ADMIN_PIN){ errEl.textContent='❌ Current PIN is incorrect.'; return; }
+  if(!np||np.length<3){ errEl.textContent='New PIN must be at least 3 digits.'; return; }
+  if(np!==np2){ errEl.textContent='New PINs do not match.'; return; }
+  if(employees.find(e=>e.pin===np)){ errEl.textContent='That PIN is already used by an employee.'; return; }
+  // Save to Supabase settings table
+  const { data: existing } = await sb.from('settings').select('*').eq('key','admin_pin');
+  if(existing && existing.length>0){
+    await sb.from('settings').update({value:np}).eq('key','admin_pin');
+  } else {
+    await sb.from('settings').insert({key:'admin_pin', value:np});
+  }
+  ADMIN_PIN = np;
+  errEl.style.color='var(--green)';
+  errEl.textContent='✅ Admin PIN updated successfully!';
+  document.getElementById('settingsCurrPin').value='';
+  document.getElementById('settingsNewPin').value='';
+  document.getElementById('settingsNewPin2').value='';
+  setTimeout(()=>{ errEl.textContent=''; errEl.style.color='var(--red)'; }, 3000);
+}
+
+// ══════════════════════════════════════════════════════════
+//  TASK CARD
+// ══════════════════════════════════════════════════════════
+function taskCard(t, showEmp=false, viewMode='assignee'){
+  const sm={todo:['sp-todo','To Do'],inprogress:['sp-inprog','In Progress'],done:['sp-done','Done']};
+  const pm={high:'pri-high',medium:'pri-med',low:'pri-low'};
+  const [sc,sl]=sm[t.status]||['sp-todo','To Do'];
+  const isDone=t.status==='done';
+  const isOverdue=t.due_date&&t.due_date<today()&&!isDone;
+  const isDueToday=t.due_date&&t.due_date===today()&&!isDone;
+  const hist=t.status_history||[];
+  const comments=t.comments||[];
+  const followups=t.followups||[];
+  const isUnread=!t.acknowledged_at&&!isDone&&!currentUser.isAdmin&&viewMode==='assignee';
+  const isAssigner=viewMode==='assigner';
+  const emp=showEmp?employees.find(e=>e.id===t.emp_id):null;
+
+  return `<div class="task-card${t.is_followup?' followup-card':''}${isOverdue?' overdue-card':''}${isDueToday?' duetoday-card':''}${isUnread?' unread-card':''}">
+    ${isUnread?`<div class="unread-banner">🆕 New — tap to acknowledge</div>`:''}
+    ${isAssigner?`<div class="assigner-banner">📤 Assigned to <b>${esc(emp?emp.name:'colleague')}</b>${t.acknowledged_at?` · <span style="color:var(--green)">✅ Seen ${esc(t.acknowledged_at)}</span>`:' · <span style="color:var(--yellow)">⏳ Not yet seen</span>'}</div>`:''}
+    <div class="task-top">
+      <div class="task-check${isDone?' checked':''}${isAssigner?' view-only':''}" onclick="${isAssigner?'':('toggleCheck(\''+t.id+'\')')}"></div>
+      <div class="task-body">
+        <div class="task-title${isDone?' done-text':''}">
+          ${t.is_followup?'<span>🔁</span>':''}
+          ${isOverdue?'<span>🔴</span>':''}${isDueToday?'<span>🟡</span>':''}
+          ${esc(t.title)}
+          <span class="status-pill ${sc}">${sl}</span>
+          ${t.priority?`<span class="priority-pill ${pm[t.priority]||''}">${t.priority}</span>`:''}
+          ${showEmp&&emp?`<span class="emp-name-pill">${isAssigner?'→ ':''}${esc(emp.name)}</span>`:''}
+        </div>
+        <div class="task-meta">
+          <span>📅 ${esc(t.allocated_at||'')}</span>
+          ${t.due_date?`<span class="${isOverdue?'overdue-text':isDueToday?'today-text':''}">⏰ Due: ${esc(t.due_date)}</span>`:''}
+          ${t.assigned_by?`<span>👤 By: ${esc(t.assigned_by)}</span>`:''}
+          ${!isAssigner&&t.acknowledged_at?`<span style="color:var(--green)">✅ Seen</span>`:''}
+        </div>
+        ${t.comment?`<div class="task-comment">💬 ${esc(t.comment)}</div>`:''}
+        ${followups.length?`<div class="section-block"><div class="section-label">🔁 Follow-ups (${followups.length})</div>${followups.map((f,i)=>`<div class="followup-item"><div class="followup-item-top"><span class="followup-dot ${f.done?'done':''}"></span><span class="${f.done?'done-text':''}">${esc(f.text)}</span>${!f.done?`<button class="tiny-btn" onclick="doneFollowup('${t.id}',${i})">Done</button>`:'<span class="tiny-done-tag">✓</span>'}</div><div class="followup-meta">${esc(f.by)} · ${esc(f.at)}${f.done?' · ✓ '+esc(f.done_at||''):''}</div></div>`).join('')}</div>`:''}
+        ${comments.length?`<div class="section-block"><div class="section-label">💬 Activity (${comments.length})</div>${comments.map(c=>`<div class="comment-item"><div class="comment-author">${esc(c.by)}<span class="comment-time">${esc(c.at)}</span></div><div class="comment-text">${esc(c.text)}</div></div>`).join('')}</div>`:''}
+        ${hist.length?`<div class="section-block"><div class="section-label">📋 Status History</div>${hist.map(h=>`<div style="font-size:11px;color:var(--muted);margin-top:3px">→ <b style="color:var(--text)">${esc(h.status)}</b> · ${esc(h.at)}${h.note?' — '+esc(h.note):''}</div>`).join('')}</div>`:''}
+        ${isDone&&t.completion_note?`<div class="completion-info">✅ ${esc(t.completed_at||'')} — ${esc(t.completion_note)}${t.completed_by?' · '+esc(t.completed_by):''}</div>`:''}
+      </div>
+    </div>
+    <div class="task-actions">
+      ${!isDone&&isUnread?`<button class="task-action-btn ack-btn" onclick="acknowledgeTask('${t.id}')">👁 Acknowledge</button>`:''}
+      ${!isDone&&!isAssigner?`<button class="task-action-btn" onclick="openStatusModal('${t.id}')">Update Status</button>`:''}
+      ${!isDone&&!isAssigner?`<button class="task-action-btn" onclick="openCompleteModal('${t.id}')">✓ Complete</button>`:''}
+      ${canEdit(t)?`<button class="task-action-btn edit-btn" onclick="openEditTaskModal('${t.id}')">✏️ Edit</button>`:''}
+      <button class="task-action-btn" onclick="openCommentModal('${t.id}')">💬 Comment</button>
+      <button class="task-action-btn" onclick="openFollowupOnTask('${t.id}')">🔁 Follow-up</button>
+      ${currentUser.isAdmin?`<button class="task-action-btn danger" onclick="deleteTask('${t.id}')">Delete</button>`:''}
+    </div>
+  </div>`;
+}
+
+// ── Can edit: admin, task owner (emp_id), or assigner ────
+function canEdit(t){
+  if(currentUser.isAdmin) return true;
+  if(t.emp_id === currentUser.id) return true;       // assignee
+  if(t.assigned_by_id === currentUser.id) return true; // assigner
+  return false;
+}
+
+function openEditTaskModal(id){
+  const t = tasks.find(x=>x.id===id); if(!t) return;
+  pendingCommentTaskId = id;
+  document.getElementById('editTaskTitle').value    = t.title||'';
+  document.getElementById('editTaskComment').value  = t.comment||'';
+  document.getElementById('editTaskPriority').value = t.priority||'medium';
+  document.getElementById('editTaskDue').value      = t.due_date||'';
+  document.getElementById('editTaskAssignedBy').value = t.assigned_by||'';
+  document.getElementById('editTaskError').textContent = '';
+  // show who assigned and to whom for context
+  const emp = employees.find(e=>e.id===t.emp_id);
+  document.getElementById('editTaskContext').textContent =
+    `Assigned to: ${emp?emp.name:'—'} · Created: ${t.allocated_at||''}`;
+  openModal('editTaskModal');
+}
+
+async function saveEditTask(){
+  const title = document.getElementById('editTaskTitle').value.trim();
+  const errEl = document.getElementById('editTaskError');
+  errEl.textContent='';
+  if(!title){ errEl.textContent='Title is required.'; return; }
+  const t = tasks.find(x=>x.id===pendingCommentTaskId); if(!t) return;
+
+  // Log edit in comments
+  const editNote = `✏️ Task edited by ${currentUser.name} at ${ts()}`;
+  const prevTitle   = t.title;
+  const prevComment = t.comment;
+  const prevPriority= t.priority;
+  const prevDue     = t.due_date;
+  let changes = [];
+  if(prevTitle   !== title)                                       changes.push(`Title: "${prevTitle}" → "${title}"`);
+  if(prevComment !== document.getElementById('editTaskComment').value.trim())  changes.push('Description updated');
+  if(prevPriority!== document.getElementById('editTaskPriority').value)        changes.push(`Priority: ${prevPriority} → ${document.getElementById('editTaskPriority').value}`);
+  if((prevDue||'') !== document.getElementById('editTaskDue').value)           changes.push(`Due date updated`);
+
+  const comments = [...(t.comments||[]), {
+    text: editNote + (changes.length ? ' — ' + changes.join(', ') : ''),
+    by: currentUser.name, at: ts()
+  }];
+
+  await sb.from('tasks').update({
+    title,
+    comment:     document.getElementById('editTaskComment').value.trim(),
+    priority:    document.getElementById('editTaskPriority').value,
+    due_date:    document.getElementById('editTaskDue').value||null,
+    assigned_by: document.getElementById('editTaskAssignedBy').value.trim(),
+    comments
+  }).eq('id', pendingCommentTaskId);
+
+  closeModal('editTaskModal');
+  await loadTasks();
+}
+function selectEmployee(id){
+  if(!currentUser.isAdmin&&id!==currentUser.id) return;
+  activeEmpId=id; activeFilter='all'; activeView='tasks';
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector('[data-filter="all"]')?.classList.add('active');
+  renderTabs(); renderContent();
+}
+
+function showView(v){ activeView=v; renderTabs(); renderContent(); }
+
+function setFilter(f,btn){
+  activeFilter=f; activeView='tasks';
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderContent();
+}
+
+// ══════════════════════════════════════════════════════════
+//  DB ACTIONS
+// ══════════════════════════════════════════════════════════
+async function acknowledgeTask(id){
+  await sb.from('tasks').update({acknowledged_at:ts(),acknowledged_by:currentUser.name}).eq('id',id);
+}
+
+function openCommentModal(id){ pendingCommentTaskId=id; document.getElementById('commentText').value=''; openModal('commentModal'); }
+async function saveComment(){
+  const text=document.getElementById('commentText').value.trim();
+  if(!text){alert('Please enter a comment.');return;}
+  const t=tasks.find(x=>x.id===pendingCommentTaskId);
+  const comments=[...(t.comments||[]),{text,by:currentUser.name,at:ts()}];
+  await sb.from('tasks').update({comments}).eq('id',pendingCommentTaskId);
+  closeModal('commentModal');
+}
+
+function openFollowupOnTask(id){ pendingCommentTaskId=id; document.getElementById('taskFollowupText').value=''; openModal('taskFollowupModal'); }
+async function saveTaskFollowup(){
+  const text=document.getElementById('taskFollowupText').value.trim();
+  if(!text){alert('Please describe the follow-up.');return;}
+  const t=tasks.find(x=>x.id===pendingCommentTaskId);
+  const followups=[...(t.followups||[]),{text,by:currentUser.name,at:ts(),done:false}];
+  await sb.from('tasks').update({followups}).eq('id',pendingCommentTaskId);
+  closeModal('taskFollowupModal');
+}
+
+async function doneFollowup(taskId,idx){
+  const t=tasks.find(x=>x.id===taskId);
+  const followups=[...(t.followups||[])];
+  followups[idx]={...followups[idx],done:true,done_at:ts(),done_by:currentUser.name};
+  await sb.from('tasks').update({followups}).eq('id',taskId);
+}
+
+function openAssignModal(){
+  const targets=employees.filter(e=>currentUser.isAdmin?true:e.id!==currentUser.id);
+  if(!targets.length){alert('No other employees to assign to.');return;}
+  document.getElementById('assignToEmp').innerHTML=targets.map(e=>`<option value="${e.id}">${esc(e.name)}${e.role?' — '+esc(e.role):''}</option>`).join('');
+  document.getElementById('taskTitle').value='';
+  document.getElementById('taskComment').value='';
+  document.getElementById('assignedBy').value=currentUser.isAdmin?'Admin':currentUser.name;
+  document.getElementById('taskPriority').value='medium';
+  document.getElementById('taskDue').value='';
+  openModal('assignModal');
+}
+
+async function saveTask(){
+  const title=document.getElementById('taskTitle').value.trim();
+  if(!title){alert('Task title is required.');return;}
+  const empId=document.getElementById('assignToEmp').value;
+  document.getElementById('saveTaskBtn').disabled=true;
+  await sb.from('tasks').insert({
+    emp_id:empId, title,
+    comment:document.getElementById('taskComment').value.trim(),
+    priority:document.getElementById('taskPriority').value,
+    due_date:document.getElementById('taskDue').value||null,
+    assigned_by:document.getElementById('assignedBy').value.trim(),
+    assigned_by_id:currentUser.id,
+    assigned_by_name:currentUser.name,
+    status:'todo', allocated_at:ts(), is_followup:false,
+    status_history:[], comments:[], followups:[],
+    acknowledged_at:null, acknowledged_by:null
+  });
+  document.getElementById('saveTaskBtn').disabled=false;
+  closeModal('assignModal');
+  await loadTasks();
+}
+
+async function saveSelfFollowup(){
+  const title=document.getElementById('fuTitle').value.trim();
+  if(!title){alert('Title required.');return;}
+  document.getElementById('saveFuBtn').disabled=true;
+  await sb.from('tasks').insert({
+    emp_id:currentUser.id, title,
+    comment:document.getElementById('fuNote').value.trim(),
+    priority:'medium',
+    due_date:document.getElementById('fuDue').value||null,
+    assigned_by:currentUser.name,
+    assigned_by_id:currentUser.id,
+    assigned_by_name:currentUser.name,
+    status:'todo', allocated_at:ts(), is_followup:true,
+    status_history:[], comments:[], followups:[],
+    acknowledged_at:'self', acknowledged_by:currentUser.name
+  });
+  document.getElementById('saveFuBtn').disabled=false;
+  closeModal('followupModal');
+  await loadTasks();
+}
+
+function toggleCheck(id){
+  const t=tasks.find(x=>x.id===id); if(!t) return;
+  if(t.status==='done'){
+    sb.from('tasks').update({status:'todo',completion_note:null,completed_at:null,completed_by:null}).eq('id',id).then(()=>loadTasks());
+  } else { openCompleteModal(id); }
+}
+
+function openCompleteModal(id){ pendingCompleteId=id; document.getElementById('completeNote').value=''; document.getElementById('completedBy').value=currentUser.name; openModal('completeModal'); }
+async function confirmComplete(){
+  const note=document.getElementById('completeNote').value.trim();
+  const by=document.getElementById('completedBy').value.trim();
+  const now=ts();
+  const t=tasks.find(x=>x.id===pendingCompleteId);
+  const hist=[...(t.status_history||[]),{status:'Done',at:now,note}];
+  await sb.from('tasks').update({status:'done',completion_note:note,completed_by:by,completed_at:now,status_history:hist}).eq('id',pendingCompleteId);
+  closeModal('completeModal');
+  await loadTasks();
+}
+
+function openStatusModal(id){ pendingStatusId=id; const t=tasks.find(x=>x.id===id); document.getElementById('newStatus').value=t?.status||'todo'; document.getElementById('statusNote').value=''; openModal('statusModal'); }
+async function confirmStatus(){
+  const ns=document.getElementById('newStatus').value;
+  const note=document.getElementById('statusNote').value.trim();
+  const now=ts();
+  const t=tasks.find(x=>x.id===pendingStatusId);
+  const hist=[...(t.status_history||[]),{status:ns.charAt(0).toUpperCase()+ns.slice(1),at:now,note}];
+  const upd={status:ns,status_history:hist};
+  if(ns==='done'){upd.completed_at=now;upd.completion_note=note;}
+  await sb.from('tasks').update(upd).eq('id',pendingStatusId);
+  closeModal('statusModal');
+  await loadTasks();
+}
+
+async function deleteTask(id){
+  if(!currentUser.isAdmin) return;
+  if(!confirm('Delete this task?')) return;
+  await sb.from('tasks').delete().eq('id',id);
+  await loadTasks();
+}
+
+async function saveEmployee(){
+  const name=document.getElementById('newEmpName').value.trim();
+  const pin=document.getElementById('newEmpPin').value.trim();
+  const pin2=document.getElementById('newEmpPinConfirm').value.trim();
+  const errEl=document.getElementById('empModalError');
+  errEl.textContent='';
+  if(!name){errEl.textContent='Name is required.';return;}
+  if(!pin||pin.length<3){errEl.textContent='PIN must be at least 3 digits.';return;}
+  if(pin!==pin2){errEl.textContent='PINs do not match.';return;}
+  if(pin===ADMIN_PIN){errEl.textContent='That PIN is reserved for Admin.';return;}
+  if(employees.find(e=>e.pin===pin)){errEl.textContent='PIN already in use.';return;}
+  document.getElementById('saveEmpBtn').disabled=true;
+  await sb.from('employees').insert({name,role:document.getElementById('newEmpRole').value.trim(),pin});
+  document.getElementById('saveEmpBtn').disabled=false;
+  closeModal('empModal');
+  document.getElementById('newEmpName').value='';
+  document.getElementById('newEmpRole').value='';
+  document.getElementById('newEmpPin').value='';
+  document.getElementById('newEmpPinConfirm').value='';
+  await loadEmployees();
+}
+
+function openEditEmp(id){
+  const emp=employees.find(e=>e.id===id); if(!emp) return;
+  pendingEditEmpId=id;
+  document.getElementById('editEmpName').value=emp.name;
+  document.getElementById('editEmpRole').value=emp.role||'';
+  document.getElementById('editEmpError').textContent='';
+  openModal('editEmpModal');
+}
+async function saveEditEmp(){
+  const name=document.getElementById('editEmpName').value.trim();
+  if(!name){document.getElementById('editEmpError').textContent='Name required.';return;}
+  await sb.from('employees').update({name,role:document.getElementById('editEmpRole').value.trim()}).eq('id',pendingEditEmpId);
+  closeModal('editEmpModal');
+  await loadEmployees();
+}
+
+async function removeEmployee(id){
+  const emp=employees.find(e=>e.id===id);
+  if(!confirm(`Remove ${emp?.name}?`)) return;
+  await sb.from('employees').delete().eq('id',id);
+  await loadEmployees();
+}
+
+function openResetPin(id){
+  pendingEditEmpId=id;
+  const emp=employees.find(e=>e.id===id);
+  document.getElementById('resetPinEmpName').textContent=emp?.name||'';
+  document.getElementById('resetPinNew').value='';
+  document.getElementById('resetPinConfirm').value='';
+  document.getElementById('resetPinError').textContent='';
+  openModal('resetPinModal');
+}
+async function saveResetPin(){
+  const p=document.getElementById('resetPinNew').value.trim();
+  const p2=document.getElementById('resetPinConfirm').value.trim();
+  const errEl=document.getElementById('resetPinError');
+  errEl.textContent='';
+  if(!p||p.length<3){errEl.textContent='PIN must be at least 3 digits.';return;}
+  if(p!==p2){errEl.textContent='PINs do not match.';return;}
+  if(p===ADMIN_PIN){errEl.textContent='Reserved for Admin.';return;}
+  await sb.from('employees').update({pin:p}).eq('id',pendingEditEmpId);
+  closeModal('resetPinModal');
+  alert('✅ PIN reset!');
+  await loadEmployees();
+}
+
+async function saveChangePin(){
+  const old=document.getElementById('oldPin').value.trim();
+  const np=document.getElementById('newPin').value.trim();
+  const np2=document.getElementById('newPinConfirm').value.trim();
+  const errEl=document.getElementById('changePinError');
+  errEl.textContent='';
+  const emp=employees.find(e=>e.id===currentUser.id);
+  if(emp.pin!==old){errEl.textContent='Current PIN incorrect.';return;}
+  if(!np||np.length<3){errEl.textContent='New PIN too short.';return;}
+  if(np!==np2){errEl.textContent='PINs do not match.';return;}
+  if(np===ADMIN_PIN){errEl.textContent='Reserved.';return;}
+  await sb.from('employees').update({pin:np}).eq('id',currentUser.id);
+  closeModal('changePinModal');
+  alert('✅ PIN changed!');
+  await loadEmployees();
+}
+
+// ══════════════════════════════════════════════════════════
+//  MOBILE NAV
+// ══════════════════════════════════════════════════════════
+function mobileNav(view){
+  showView(view);
+  // update bottom nav active state
+  document.querySelectorAll('.bnav-item').forEach(b=>{ b.classList.remove('active','active-peer','active-special'); });
+  const map = {'tasks':'bnav-tasks','assigned_by_me':'bnav-assigned','manage_emp':'bnav-team','settings':'bnav-settings','overdue_all':'bnav-filter'};
+  const el = document.getElementById(map[view]);
+  if(el) el.classList.add(view==='assigned_by_me'?'active-peer':view==='settings'||view==='manage_emp'?'active-special':'active');
+}
+
+function toggleFilterDrawer(){
+  const d = document.getElementById('filterDrawer');
+  d.classList.toggle('open');
+}
+
+function setFilterMobile(f, btn){
+  // sync with desktop filter
+  activeFilter=f; activeView='tasks';
+  document.querySelectorAll('[data-filter]').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('[data-filter2]').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`[data-filter="${f}"]`)?.classList.add('active');
+  document.querySelector(`[data-filter2="${f}"]`)?.classList.add('active');
+  btn.classList.add('active');
+  renderContent();
+  toggleFilterDrawer();
+}
+
+function updateMobileStats(){
+  const todayStr=today();
+  if(!currentUser) return;
+  const empTasks = activeView==='assigned_by_me'
+    ? tasks.filter(t=>t.assigned_by_id===currentUser.id&&t.emp_id!==currentUser.id)
+    : tasks.filter(t=>t.emp_id===(currentUser.isAdmin?activeEmpId:currentUser.id));
+  const s2t = document.getElementById('statTodo2');
+  const s2p = document.getElementById('statInProg2');
+  const s2d = document.getElementById('statDone2');
+  const s2o = document.getElementById('statOverdue2');
+  if(s2t) s2t.textContent=empTasks.filter(t=>t.status==='todo').length;
+  if(s2p) s2p.textContent=empTasks.filter(t=>t.status==='inprogress').length;
+  if(s2d) s2d.textContent=empTasks.filter(t=>t.status==='done').length;
+  if(s2o) s2o.textContent=empTasks.filter(t=>t.due_date&&t.due_date<todayStr&&t.status!=='done').length;
+  // bottom nav badges
+  const myPending=tasks.filter(t=>t.emp_id===(currentUser.isAdmin?activeEmpId:currentUser.id)&&t.status!=='done').length;
+  const assignedPending=tasks.filter(t=>t.assigned_by_id===currentUser.id&&t.emp_id!==currentUser.id&&t.status!=='done').length;
+  const bt=document.getElementById('bnavBadgeTasks');
+  const ba=document.getElementById('bnavBadgeAssigned');
+  if(bt){ bt.textContent=myPending; bt.style.display=myPending>0?'block':'none'; }
+  if(ba){ ba.textContent=assignedPending; ba.style.display=assignedPending>0?'block':'none'; }
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  document.querySelectorAll('.modal-overlay').forEach(o=>{
+    o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); });
+  });
+  document.getElementById('loginPin').addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+  init();
+});
+</script>
+</body>
+</html>
