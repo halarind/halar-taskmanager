@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HALAR — Task Manager</title>
+<title>HALAR — Task Manager v3.0</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500;600;700&display=swap');
@@ -137,6 +137,38 @@ main{flex:1;display:flex;overflow:hidden;}
 .pri-med{background:#fef3c7;color:#92400e;}
 .pri-low{background:#dcfce7;color:#166534;}
 .emp-name-pill{font-size:9px;font-weight:500;padding:1px 6px;border-radius:10px;background:#f1f5f9;color:var(--muted);}
+.cat-pill{font-size:9px;font-weight:600;padding:1px 6px;border-radius:10px;background:#ede9fe;color:#6d28d9;}
+.recur-pill{font-size:9px;font-weight:600;padding:1px 6px;border-radius:10px;background:#e0f2fe;color:#0369a1;}
+.search-bar{display:flex;gap:8px;padding:8px 14px;background:#fff;border-bottom:1px solid var(--border);align-items:center;flex-shrink:0;}
+.search-bar input{flex:1;background:#f8fafc;border:1.5px solid var(--border);border-radius:7px;padding:7px 11px;font-size:12.5px;font-family:'Inter',sans-serif;outline:none;color:var(--text);}
+.search-bar input:focus{border-color:var(--accent);background:#fff;}
+.search-bar select{background:#f8fafc;border:1.5px solid var(--border);border-radius:7px;padding:7px 10px;font-size:12px;font-family:'Inter',sans-serif;outline:none;color:var(--text);cursor:pointer;}
+.search-clear{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:#fff;color:var(--muted);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.search-clear:hover{color:var(--red);border-color:#fca5a5;}
+.dash-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+.dash-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center;box-shadow:var(--shadow);}
+.dash-num{font-size:28px;font-weight:700;font-family:'DM Mono',monospace;}
+.dash-lbl{font-size:11px;color:var(--muted);margin-top:2px;}
+.dash-section{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:12px;box-shadow:var(--shadow);}
+.dash-section-title{font-size:13px;font-weight:700;margin-bottom:12px;color:var(--text);}
+.progress-bar-lg{background:#f1f5f9;border-radius:20px;height:26px;overflow:hidden;}
+.progress-fill{background:linear-gradient(90deg,var(--green),#22c55e);height:100%;display:flex;align-items:center;justify-content:flex-end;padding-right:10px;color:#fff;font-size:12px;font-weight:700;border-radius:20px;transition:width .5s;min-width:36px;}
+.dash-emp-row{padding:10px 0;border-bottom:1px solid var(--border);}
+.dash-emp-row:last-child{border-bottom:none;}
+.dash-emp-name{font-size:13px;font-weight:600;margin-bottom:5px;}
+.dash-emp-bar-wrap{position:relative;background:#f1f5f9;border-radius:6px;height:20px;overflow:hidden;margin-bottom:4px;}
+.dash-emp-bar{background:linear-gradient(90deg,var(--accent),#3b82f6);height:100%;border-radius:6px;min-width:2px;transition:width .5s;}
+.dash-emp-count{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:600;color:var(--text);}
+.dash-emp-stats{font-size:11px;color:var(--muted);}
+.cat-add-row{display:flex;gap:8px;margin-bottom:12px;}
+.cat-add-row input{flex:1;background:#f8fafc;border:1.5px solid var(--border);border-radius:7px;padding:9px 12px;font-size:13px;font-family:'Inter',sans-serif;outline:none;color:var(--text);}
+.cat-add-row input:focus{border-color:var(--accent);background:#fff;}
+.cat-error{font-size:11.5px;color:var(--red);margin-bottom:10px;min-height:14px;}
+.cat-list{display:flex;flex-direction:column;gap:6px;}
+.cat-row{background:#fff;border:1px solid var(--border);border-radius:8px;padding:11px 14px;display:flex;align-items:center;gap:12px;}
+.cat-name{flex:1;font-size:13px;font-weight:600;}
+.cat-count{font-size:11px;color:var(--muted);background:#f1f5f9;padding:2px 10px;border-radius:20px;}
+.tab-myday.active{color:#d97706;background:#fffbeb;border-color:#fde68a;}
 .task-meta{font-size:10px;color:var(--muted2);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
 .overdue-text{color:var(--red)!important;font-weight:600;}
 .today-text{color:var(--yellow)!important;font-weight:600;}
@@ -285,6 +317,7 @@ main{flex:1;display:flex;overflow:hidden;}
   <div class="login-box">
     <div class="login-logo">HALAR</div>
     <div class="login-tagline">TASK MANAGER</div>
+    <div style="font-size:10px;color:var(--muted2);margin-top:-20px;margin-bottom:24px;letter-spacing:2px">VERSION 3.0</div>
     <div class="login-label">Your PIN</div>
     <input class="login-input" type="password" id="loginPin" maxlength="10" placeholder="••••" autocomplete="off">
     <button class="login-btn" id="loginBtn" onclick="doLogin()">Sign In →</button>
@@ -336,6 +369,11 @@ main{flex:1;display:flex;overflow:hidden;}
           <button class="btn-assign" onclick="openAssignModal()">📤 Assign to Colleague</button>
         </div>
       </div>
+      <div class="search-bar" id="searchBar">
+        <input type="text" id="searchInput" placeholder="🔍 Search tasks by title, description, or comment…" oninput="onSearchInput()">
+        <select id="categoryFilter" onchange="renderContent()"><option value="">All categories</option></select>
+        <button class="search-clear" id="searchClear" onclick="clearSearch()" style="display:none">✕</button>
+      </div>
       <div class="task-list" id="taskList"><div class="empty-state"><div class="icon">⏳</div><p>Loading…</p></div></div>
     </section>
   </main>
@@ -343,9 +381,13 @@ main{flex:1;display:flex;overflow:hidden;}
 
 <!-- BOTTOM NAV (mobile only) -->
 <div id="bottomNav">
+  <div class="bnav-item" id="bnav-myday" onclick="mobileNav('myday')">
+    <span class="bnav-icon">☀️</span>
+    <span class="bnav-label">My Day</span>
+  </div>
   <div class="bnav-item active" id="bnav-tasks" onclick="mobileNav('tasks')">
     <span class="bnav-icon">📋</span>
-    <span class="bnav-label">My Tasks</span>
+    <span class="bnav-label">Tasks</span>
     <span class="bnav-badge" id="bnavBadgeTasks" style="display:none"></span>
   </div>
   <div class="bnav-item" id="bnav-assigned" onclick="mobileNav('assigned_by_me')">
@@ -353,17 +395,13 @@ main{flex:1;display:flex;overflow:hidden;}
     <span class="bnav-label">Assigned</span>
     <span class="bnav-badge" id="bnavBadgeAssigned" style="display:none"></span>
   </div>
-  <div class="bnav-item admin-only" id="bnav-team" onclick="mobileNav('manage_emp')" style="display:none">
-    <span class="bnav-icon">👥</span>
-    <span class="bnav-label">Team</span>
-  </div>
   <div class="bnav-item" id="bnav-filter" onclick="toggleFilterDrawer()">
     <span class="bnav-icon">🔍</span>
     <span class="bnav-label">Filter</span>
   </div>
-  <div class="bnav-item admin-only" id="bnav-settings" onclick="mobileNav('settings')" style="display:none">
-    <span class="bnav-icon">⚙️</span>
-    <span class="bnav-label">Settings</span>
+  <div class="bnav-item admin-only" id="bnav-settings" onclick="mobileNav('dashboard')" style="display:none">
+    <span class="bnav-icon">📊</span>
+    <span class="bnav-label">Dashboard</span>
   </div>
   <div class="bnav-item emp-only" id="bnav-pin" onclick="openModal('changePinModal')" style="display:none">
     <span class="bnav-icon">🔑</span>
@@ -414,6 +452,15 @@ main{flex:1;display:flex;overflow:hidden;}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <div class="form-group"><label>Priority</label><select id="taskPriority"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></div>
       <div class="form-group"><label>Due Date</label><input type="date" id="taskDue"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="form-group"><label>Category</label><select id="taskCategory"></select></div>
+      <div class="form-group"><label>Repeat</label><select id="taskRecurrence">
+        <option value="none" selected>No repeat</option>
+        <option value="daily">Daily</option>
+        <option value="weekly">Weekly</option>
+        <option value="monthly">Monthly</option>
+      </select></div>
     </div>
     <div class="form-group"><label>Assigned By</label><input type="text" id="assignedBy"></div>
     <div class="modal-actions">
@@ -575,6 +622,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentUser = null;
 let employees   = [];
 let tasks       = [];
+let categories  = [];
 let activeEmpId = null;
 let activeFilter= 'all';
 let activeView  = 'tasks';
@@ -614,6 +662,18 @@ async function init(){
     if(e2) throw e2;
     tasks = tks || [];
 
+    // Load categories
+    try {
+      const { data: cats } = await sb.from('categories').select('*').order('created_at');
+      categories = cats || [];
+    } catch(e){ categories = []; }
+
+    // Auto-delete completed tasks older than 60 days (runs once on load)
+    purgeOldCompletedTasks();
+
+    // Process recurring tasks — recreate any that are due
+    processRecurringTasks();
+
     st.className = 'login-status ready';
     st.innerHTML = '✅ Connected! Enter your PIN to sign in.<br><small>First time? Login as Admin to add employees.</small>';
     document.getElementById('loginPin').focus();
@@ -625,6 +685,9 @@ async function init(){
       const { data } = await sb.from('settings').select('*');
       if(data){ const p=data.find(s=>s.key==='admin_pin'); if(p) ADMIN_PIN=p.value; }
     }).subscribe();
+    try {
+      sb.channel('categories-ch').on('postgres_changes',{event:'*',schema:'public',table:'categories'},()=>{ loadCategories(); }).subscribe();
+    } catch(e){}
 
   } catch(err){
     st.className = 'login-status error';
@@ -636,6 +699,98 @@ async function loadEmployees(){
   const { data } = await sb.from('employees').select('*').order('created_at');
   employees = data || [];
   renderTabs(); renderContent();
+}
+
+async function loadCategories(){
+  try {
+    const { data } = await sb.from('categories').select('*').order('created_at');
+    categories = data || [];
+    renderContent();
+  } catch(e){ categories = []; }
+}
+
+// ══════════════════════════════════════════════════════════
+//  RECURRING TASKS — recreate when due
+// ══════════════════════════════════════════════════════════
+async function processRecurringTasks(){
+  try {
+    const todayStr = today();
+    // Find recurring "template" tasks that are done and whose next occurrence is due
+    const recurring = tasks.filter(t => t.recurrence && t.recurrence !== 'none' && t.status === 'done');
+
+    for(const t of recurring){
+      // Compute next due date from the task's due_date
+      const baseDate = t.due_date ? new Date(t.due_date) : new Date(t.completed_at_iso || t.created_at);
+      const next = new Date(baseDate);
+      if(t.recurrence === 'daily')   next.setDate(next.getDate()+1);
+      if(t.recurrence === 'weekly')  next.setDate(next.getDate()+7);
+      if(t.recurrence === 'monthly') next.setMonth(next.getMonth()+1);
+      const nextStr = next.toISOString().split('T')[0];
+
+      // Only recreate if next date has arrived and we haven't already made it
+      if(nextStr > todayStr) continue;
+
+      // Check a fresh copy doesn't already exist (same title, same emp, not done, due nextStr)
+      const exists = tasks.some(x =>
+        x.title===t.title && x.emp_id===t.emp_id && x.status!=='done' &&
+        x.recurrence===t.recurrence && x.due_date===nextStr
+      );
+      if(exists) continue;
+
+      // Create the next occurrence
+      await sb.from('tasks').insert({
+        emp_id: t.emp_id, title: t.title, comment: t.comment,
+        priority: t.priority, due_date: nextStr,
+        assigned_by: t.assigned_by, assigned_by_id: t.assigned_by_id, assigned_by_name: t.assigned_by_name,
+        category: t.category||null,
+        recurrence: t.recurrence,
+        status:'todo', allocated_at: ts(), is_followup:false,
+        status_history:[], comments:[], followups:[], acknowledged_at:null, acknowledged_by:null
+      });
+
+      // Turn off recurrence on the old done task so it doesn't spawn again
+      await sb.from('tasks').update({recurrence:'none'}).eq('id', t.id);
+    }
+    // reload if we created anything
+    const { data } = await sb.from('tasks').select('*').order('created_at',{ascending:false});
+    tasks = data || [];
+  } catch(err){
+    console.log('Recurring check skipped:', err.message);
+  }
+}
+
+// ══════════════════════════════════════════════════════════
+//  AUTO-DELETE completed tasks older than 60 days
+// ══════════════════════════════════════════════════════════
+async function purgeOldCompletedTasks(){
+  try {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 60); // 60 days ago
+
+    // Find completed tasks whose completion date is older than 60 days.
+    // Prefer completed_at_iso (reliable timestamp); fall back to created_at.
+    const toDelete = tasks.filter(t => {
+      if(t.status !== 'done') return false;
+      const ref = t.completed_at_iso || t.created_at;
+      if(!ref) return false;
+      const d = new Date(ref);
+      if(isNaN(d.getTime())) return false;
+      return d < cutoff;
+    });
+
+    if(toDelete.length === 0) return;
+
+    // Delete them from Supabase
+    for(const t of toDelete){
+      await sb.from('tasks').delete().eq('id', t.id);
+    }
+    // Refresh local list
+    const { data } = await sb.from('tasks').select('*').order('created_at',{ascending:false});
+    tasks = data || [];
+    console.log(`Auto-deleted ${toDelete.length} completed task(s) older than 60 days.`);
+  } catch(err){
+    console.log('Purge check skipped:', err.message);
+  }
 }
 
 async function loadTasks(){
@@ -795,7 +950,10 @@ function renderTabs(){
   const bar=document.getElementById('tabsBar');
   if(!bar||!currentUser) return;
   const visible=currentUser.isAdmin?employees:employees.filter(e=>e.id===currentUser.id);
-  let html=visible.map(e=>{
+  let html='';
+  // My Day tab first (for everyone)
+  html+=`<div class="tab tab-myday${activeView==='myday'?' active':''}" onclick="showView('myday')">☀️ My Day</div>`;
+  html+=visible.map(e=>{
     const pending=tasks.filter(t=>t.emp_id===e.id&&t.status!=='done').length;
     return `<div class="tab${e.id===activeEmpId&&activeView==='tasks'?' active':''}" onclick="selectEmployee('${e.id}')">
       ${esc(e.name)}${pending>0?`<span class="badge">${pending}</span>`:''}
@@ -807,8 +965,10 @@ function renderTabs(){
   </div>`;
   if(currentUser.isAdmin){
     const od=tasks.filter(t=>t.due_date&&t.due_date<today()&&t.status!=='done').length;
+    html+=`<div class="tab tab-special${activeView==='dashboard'?' active':''}" onclick="showView('dashboard')">📊 Dashboard</div>`;
     html+=`<div class="tab tab-special${activeView==='overdue_all'?' active':''}" onclick="showView('overdue_all')">🔴 All Overdue${od>0?`<span class="badge" style="background:var(--red)">${od}</span>`:''}</div>`;
-    html+=`<div class="tab tab-special${activeView==='manage_emp'?' active':''}" onclick="showView('manage_emp')">⚙️ Manage Team</div>`;
+    html+=`<div class="tab tab-special${activeView==='manage_emp'?' active':''}" onclick="showView('manage_emp')">⚙️ Team</div>`;
+    html+=`<div class="tab tab-special${activeView==='categories'?' active':''}" onclick="showView('categories')">🏷️ Categories</div>`;
     html+=`<div class="tab tab-special${activeView==='settings'?' active':''}" onclick="showView('settings')">🔧 Settings</div>`;
   }
   bar.innerHTML=html;
@@ -823,6 +983,9 @@ function renderContent(){
   if(activeView==='manage_emp'){ renderManageEmp(); updateMobileStats(); return; }
   if(activeView==='assigned_by_me'){ renderAssignedByMe(); updateMobileStats(); return; }
   if(activeView==='settings'){ renderSettings(); updateMobileStats(); return; }
+  if(activeView==='myday'){ renderMyDay(); updateMobileStats(); return; }
+  if(activeView==='dashboard'){ renderDashboard(); updateMobileStats(); return; }
+  if(activeView==='categories'){ renderCategories(); updateMobileStats(); return; }
   renderTaskView(); updateMobileStats();
 }
 
@@ -832,6 +995,8 @@ function renderTaskView(){
   document.getElementById('empName').textContent=emp?emp.name:(currentUser.isAdmin?'Select Employee':'—');
   document.getElementById('empRole').textContent=emp?emp.role||'':'';
   document.getElementById('contentHeaderBtns').style.display='';
+  document.getElementById('searchBar').style.display='flex';
+  syncCategoryFilter();
 
   let filtered=tasks.filter(t=>t.emp_id===activeEmpId);
   const todayStr=today();
@@ -842,6 +1007,8 @@ function renderTaskView(){
   else if(activeFilter==='high') filtered=filtered.filter(t=>t.priority==='high');
   else if(activeFilter==='overdue') filtered=filtered.filter(t=>t.due_date&&t.due_date<todayStr&&t.status!=='done');
   else if(activeFilter==='unread') filtered=filtered.filter(t=>!t.acknowledged_at&&t.status!=='done');
+
+  filtered = applySearchAndCategory(filtered);
 
   const empTasks=tasks.filter(t=>t.emp_id===activeEmpId);
   document.getElementById('statTodo').textContent=empTasks.filter(t=>t.status==='todo').length;
@@ -855,10 +1022,45 @@ function renderTaskView(){
   document.getElementById('taskList').innerHTML=filtered.length?filtered.map(t=>taskCard(t)).join(''):emptyState(activeFilter==='all'?'🎉':'🔍',activeFilter==='all'?'No tasks yet':'No tasks match this filter');
 }
 
+// ── Search + category helpers ─────────────────────────────
+function applySearchAndCategory(list){
+  const q = (document.getElementById('searchInput')?.value||'').trim().toLowerCase();
+  const cat = document.getElementById('categoryFilter')?.value||'';
+  let out = list;
+  if(cat) out = out.filter(t=>t.category===cat);
+  if(q){
+    out = out.filter(t=>{
+      const inTitle=(t.title||'').toLowerCase().includes(q);
+      const inComment=(t.comment||'').toLowerCase().includes(q);
+      const inActivity=(t.comments||[]).some(c=>(c.text||'').toLowerCase().includes(q));
+      return inTitle||inComment||inActivity;
+    });
+  }
+  return out;
+}
+
+function syncCategoryFilter(){
+  const sel=document.getElementById('categoryFilter');
+  if(!sel) return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">All categories</option>'+categories.map(c=>`<option value="${esc(c.name)}"${cur===c.name?' selected':''}>${esc(c.name)}</option>`).join('');
+}
+
+function onSearchInput(){
+  document.getElementById('searchClear').style.display = document.getElementById('searchInput').value ? 'flex':'none';
+  renderContent();
+}
+function clearSearch(){
+  document.getElementById('searchInput').value='';
+  document.getElementById('searchClear').style.display='none';
+  renderContent();
+}
+
 function renderAllOverdue(){
   document.getElementById('empName').textContent='All Overdue Tasks';
   document.getElementById('empRole').textContent='Across all employees';
   document.getElementById('contentHeaderBtns').style.display='none';
+  document.getElementById('searchBar').style.display='none';
   const od=tasks.filter(t=>t.due_date&&t.due_date<today()&&t.status!=='done');
   if(!od.length){ document.getElementById('taskList').innerHTML=emptyState('✅','No overdue tasks!'); return; }
   const grouped={};
@@ -876,7 +1078,10 @@ function renderAssignedByMe(){
   document.getElementById('empName').textContent='Assigned by Me';
   document.getElementById('empRole').textContent='Tasks you sent to colleagues — live status';
   document.getElementById('contentHeaderBtns').style.display='';
-  const mine=tasks.filter(t=>t.assigned_by_id===currentUser.id&&t.emp_id!==currentUser.id);
+  document.getElementById('searchBar').style.display='flex';
+  syncCategoryFilter();
+  let mine=tasks.filter(t=>t.assigned_by_id===currentUser.id&&t.emp_id!==currentUser.id);
+  mine=applySearchAndCategory(mine);
   const p={high:0,medium:1,low:2};
   mine.sort((a,b)=>{ if(a.status==='done'&&b.status!=='done') return 1; if(b.status==='done'&&a.status!=='done') return -1; return (p[a.priority]||1)-(p[b.priority]||1); });
   document.getElementById('statTodo').textContent=mine.filter(t=>t.status==='todo').length;
@@ -887,10 +1092,245 @@ function renderAssignedByMe(){
   document.getElementById('taskList').innerHTML=mine.length?mine.map(t=>taskCard(t,true,'assigner')).join(''):emptyState('📤','No tasks assigned to colleagues yet');
 }
 
+// ══════════════════════════════════════════════════════════
+//  MY DAY VIEW
+// ══════════════════════════════════════════════════════════
+function renderMyDay(){
+  document.getElementById('empName').textContent='☀️ My Day';
+  const todayStr=today();
+  const nowDate=new Date().toLocaleDateString('en-KE',{weekday:'long',month:'long',day:'numeric'});
+  document.getElementById('empRole').textContent=nowDate;
+  document.getElementById('contentHeaderBtns').style.display='';
+  document.getElementById('searchBar').style.display='none';
+
+  const myId = currentUser.id;
+  const mine = tasks.filter(t=>t.emp_id===myId && t.status!=='done');
+  const overdue  = mine.filter(t=>t.due_date&&t.due_date<todayStr);
+  const dueToday = mine.filter(t=>t.due_date&&t.due_date===todayStr);
+  const noDate   = mine.filter(t=>!t.due_date);
+  const upcoming = mine.filter(t=>t.due_date&&t.due_date>todayStr);
+
+  // Update stats
+  document.getElementById('statTodo').textContent=mine.filter(t=>t.status==='todo').length;
+  document.getElementById('statInProg').textContent=mine.filter(t=>t.status==='inprogress').length;
+  document.getElementById('statDone').textContent=tasks.filter(t=>t.emp_id===myId&&t.status==='done').length;
+  document.getElementById('statFollowup').textContent=mine.filter(t=>t.is_followup).length;
+  document.getElementById('statOverdue').textContent=overdue.length;
+
+  let html='';
+  if(!mine.length){
+    html=emptyState('🎉','Nothing pending — enjoy your day!');
+  } else {
+    if(overdue.length){ html+=`<div class="group-header" style="color:var(--red)">🔴 Overdue <span class="group-count">${overdue.length}</span></div>`; html+=overdue.map(t=>taskCard(t)).join(''); }
+    if(dueToday.length){ html+=`<div class="group-header" style="color:var(--yellow)">🟡 Due Today <span class="group-count" style="background:var(--yellow)">${dueToday.length}</span></div>`; html+=dueToday.map(t=>taskCard(t)).join(''); }
+    if(noDate.length){ html+=`<div class="group-header">📋 No Due Date <span class="group-count" style="background:var(--muted)">${noDate.length}</span></div>`; html+=noDate.map(t=>taskCard(t)).join(''); }
+    if(upcoming.length){ html+=`<div class="group-header" style="color:var(--accent)">📅 Upcoming <span class="group-count" style="background:var(--accent)">${upcoming.length}</span></div>`; html+=upcoming.slice(0,10).map(t=>taskCard(t)).join(''); }
+  }
+  document.getElementById('taskList').innerHTML=html;
+}
+
+// ══════════════════════════════════════════════════════════
+//  DASHBOARD VIEW (admin)
+// ══════════════════════════════════════════════════════════
+function renderDashboard(){
+  document.getElementById('empName').textContent='📊 Dashboard';
+  document.getElementById('empRole').textContent='Team performance & analytics';
+  document.getElementById('contentHeaderBtns').style.display='none';
+  document.getElementById('searchBar').style.display='none';
+
+  const total=tasks.length;
+  const done=tasks.filter(t=>t.status==='done').length;
+  const pending=tasks.filter(t=>t.status!=='done').length;
+  const overdue=tasks.filter(t=>t.due_date&&t.due_date<today()&&t.status!=='done').length;
+  const completionRate= total? Math.round(done/total*100):0;
+
+  // Per-employee performance
+  const perEmp=employees.map(e=>{
+    const et=tasks.filter(t=>t.emp_id===e.id);
+    const ed=et.filter(t=>t.status==='done').length;
+    const ep=et.filter(t=>t.status!=='done').length;
+    const eo=et.filter(t=>t.due_date&&t.due_date<today()&&t.status!=='done').length;
+    const rate=et.length?Math.round(ed/et.length*100):0;
+    return {name:e.name, total:et.length, done:ed, pending:ep, overdue:eo, rate};
+  }).sort((a,b)=>b.total-a.total);
+
+  const maxTotal=Math.max(1,...perEmp.map(e=>e.total));
+
+  let html=`<div class="dash-grid">
+    <div class="dash-card"><div class="dash-num" style="color:var(--accent)">${total}</div><div class="dash-lbl">Total Tasks</div></div>
+    <div class="dash-card"><div class="dash-num" style="color:var(--green)">${done}</div><div class="dash-lbl">Completed</div></div>
+    <div class="dash-card"><div class="dash-num" style="color:var(--yellow)">${pending}</div><div class="dash-lbl">Pending</div></div>
+    <div class="dash-card"><div class="dash-num" style="color:var(--red)">${overdue}</div><div class="dash-lbl">Overdue</div></div>
+  </div>
+
+  <div class="dash-section">
+    <div class="dash-section-title">✅ Overall Completion Rate</div>
+    <div class="progress-bar-lg"><div class="progress-fill" style="width:${completionRate}%">${completionRate}%</div></div>
+  </div>
+
+  <div class="dash-section">
+    <div class="dash-section-title">👥 Tasks per Employee</div>
+    ${perEmp.length?perEmp.map(e=>`
+      <div class="dash-emp-row">
+        <div class="dash-emp-name">${esc(e.name)}</div>
+        <div class="dash-emp-bar-wrap">
+          <div class="dash-emp-bar" style="width:${Math.round(e.total/maxTotal*100)}%"></div>
+          <span class="dash-emp-count">${e.total} tasks</span>
+        </div>
+        <div class="dash-emp-stats">
+          <span style="color:var(--green)">${e.done} done</span> ·
+          <span style="color:var(--yellow)">${e.pending} pending</span>
+          ${e.overdue?` · <span style="color:var(--red)">${e.overdue} overdue</span>`:''}
+          · <b>${e.rate}%</b>
+        </div>
+      </div>`).join(''):'<div style="color:var(--muted);font-size:12px;padding:8px">No employees yet</div>'}
+  </div>
+
+  <div class="dash-section">
+    <div class="dash-section-title">📥 Export Reports</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn-primary" onclick="exportExcel()">📊 Export to Excel (CSV)</button>
+      <button class="btn-primary" style="background:var(--accent2)" onclick="exportPDF()">📄 Export to PDF</button>
+    </div>
+  </div>`;
+
+  document.getElementById('taskList').innerHTML=html;
+}
+
+// ══════════════════════════════════════════════════════════
+//  CATEGORIES VIEW (admin)
+// ══════════════════════════════════════════════════════════
+function renderCategories(){
+  document.getElementById('empName').textContent='🏷️ Categories';
+  document.getElementById('empRole').textContent='Create and manage task categories';
+  document.getElementById('contentHeaderBtns').style.display='none';
+  document.getElementById('searchBar').style.display='none';
+
+  let html=`<div class="cat-add-row">
+    <input type="text" id="newCatName" placeholder="New category name (e.g. Finance, Client, Urgent)…" onkeydown="if(event.key==='Enter')addCategory()">
+    <button class="btn-primary" onclick="addCategory()">+ Add Category</button>
+  </div>
+  <div class="cat-error" id="catError"></div>`;
+
+  if(!categories.length){
+    html+=emptyState('🏷️','No categories yet — add your first one above');
+  } else {
+    html+=`<div class="cat-list">`;
+    categories.forEach(c=>{
+      const count=tasks.filter(t=>t.category===c.name).length;
+      html+=`<div class="cat-row">
+        <div class="cat-name">🏷️ ${esc(c.name)}</div>
+        <div class="cat-count">${count} task${count!==1?'s':''}</div>
+        <button class="task-action-btn danger" onclick="deleteCategory('${c.id}','${esc(c.name)}')">Delete</button>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+  document.getElementById('taskList').innerHTML=html;
+}
+
+async function addCategory(){
+  const name=document.getElementById('newCatName').value.trim();
+  const errEl=document.getElementById('catError');
+  errEl.textContent='';
+  if(!name){ errEl.textContent='Enter a category name.'; return; }
+  if(categories.find(c=>c.name.toLowerCase()===name.toLowerCase())){ errEl.textContent='That category already exists.'; return; }
+  await sb.from('categories').insert({name});
+  await loadCategories();
+}
+
+async function deleteCategory(id,name){
+  if(!confirm(`Delete category "${name}"? Tasks keep their label but the category is removed from the list.`)) return;
+  await sb.from('categories').delete().eq('id',id);
+  await loadCategories();
+}
+
+// ══════════════════════════════════════════════════════════
+//  EXPORT — Excel (CSV) and PDF
+// ══════════════════════════════════════════════════════════
+function empName(id){ const e=employees.find(x=>x.id===id); return e?e.name:'—'; }
+
+function exportExcel(){
+  const rows=[['Employee','Task','Category','Priority','Status','Due Date','Assigned By','Allocated','Completed','Completion Note']];
+  tasks.forEach(t=>{
+    rows.push([
+      empName(t.emp_id), t.title||'', t.category||'', t.priority||'',
+      t.status||'', t.due_date||'', t.assigned_by||'',
+      t.allocated_at||'', t.completed_at||'', (t.completion_note||'').replace(/\n/g,' ')
+    ]);
+  });
+  const csv=rows.map(r=>r.map(cell=>{
+    const s=String(cell).replace(/"/g,'""');
+    return /[",\n]/.test(s)?`"${s}"`:s;
+  }).join(',')).join('\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url; a.download=`HALAR-tasks-${today()}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportPDF(){
+  const now=new Date().toLocaleString('en-KE',{dateStyle:'full',timeStyle:'short'});
+  const total=tasks.length, done=tasks.filter(t=>t.status==='done').length;
+  const pending=tasks.filter(t=>t.status!=='done').length;
+  const overdue=tasks.filter(t=>t.due_date&&t.due_date<today()&&t.status!=='done').length;
+
+  let rowsHtml='';
+  tasks.forEach(t=>{
+    const statusColor=t.status==='done'?'#16a34a':t.status==='inprogress'?'#2563eb':'#d97706';
+    rowsHtml+=`<tr>
+      <td>${esc(empName(t.emp_id))}</td>
+      <td>${esc(t.title||'')}</td>
+      <td>${esc(t.category||'—')}</td>
+      <td>${esc(t.priority||'')}</td>
+      <td style="color:${statusColor};font-weight:600">${esc(t.status||'')}</td>
+      <td>${esc(t.due_date||'—')}</td>
+      <td>${esc(t.assigned_by||'—')}</td>
+    </tr>`;
+  });
+
+  const win=window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><title>HALAR Task Report</title>
+  <style>
+    body{font-family:Arial,sans-serif;padding:30px;color:#111;}
+    h1{color:#2563eb;margin-bottom:4px;}
+    .sub{color:#666;font-size:13px;margin-bottom:20px;}
+    .summary{display:flex;gap:20px;margin-bottom:24px;}
+    .sbox{border:1px solid #ddd;border-radius:8px;padding:12px 20px;text-align:center;}
+    .sbox .n{font-size:24px;font-weight:700;}
+    .sbox .l{font-size:11px;color:#666;}
+    table{width:100%;border-collapse:collapse;font-size:12px;}
+    th{background:#2563eb;color:#fff;padding:8px;text-align:left;}
+    td{padding:7px 8px;border-bottom:1px solid #eee;}
+    tr:nth-child(even){background:#f8fafc;}
+    @media print{.noprint{display:none;}}
+  </style></head><body>
+  <h1>HALAR — Task Manager Report</h1>
+  <div class="sub">Generated ${now}</div>
+  <div class="summary">
+    <div class="sbox"><div class="n" style="color:#2563eb">${total}</div><div class="l">Total</div></div>
+    <div class="sbox"><div class="n" style="color:#16a34a">${done}</div><div class="l">Completed</div></div>
+    <div class="sbox"><div class="n" style="color:#d97706">${pending}</div><div class="l">Pending</div></div>
+    <div class="sbox"><div class="n" style="color:#dc2626">${overdue}</div><div class="l">Overdue</div></div>
+  </div>
+  <button class="noprint" onclick="window.print()" style="margin-bottom:16px;padding:8px 16px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ Print / Save as PDF</button>
+  <table>
+    <thead><tr><th>Employee</th><th>Task</th><th>Category</th><th>Priority</th><th>Status</th><th>Due</th><th>Assigned By</th></tr></thead>
+    <tbody>${rowsHtml}</tbody>
+  </table>
+  </body></html>`);
+  win.document.close();
+}
+
+
+
 function renderManageEmp(){
   document.getElementById('empName').textContent='Manage Team';
   document.getElementById('empRole').textContent='Add, edit, remove employees · Reset PINs';
   document.getElementById('contentHeaderBtns').style.display='none';
+  document.getElementById('searchBar').style.display='none';
   if(!employees.length){ document.getElementById('taskList').innerHTML=emptyState('👤','No employees added yet'); return; }
   const rows=employees.map(e=>{
     const et=tasks.filter(t=>t.emp_id===e.id);
@@ -913,6 +1353,7 @@ function renderSettings(){
   document.getElementById('empName').textContent='Settings';
   document.getElementById('empRole').textContent='Admin configuration · Change Admin PIN';
   document.getElementById('contentHeaderBtns').style.display='none';
+  document.getElementById('searchBar').style.display='none';
   document.getElementById('taskList').innerHTML=`
     <div class="settings-panel">
       <div class="settings-section">
@@ -946,6 +1387,8 @@ function renderSettings(){
         <div class="settings-info-row"><span>Completed Tasks</span><b style="color:var(--green)">${tasks.filter(t=>t.status==='done').length}</b></div>
         <div class="settings-info-row"><span>Overdue Tasks</span><b style="color:var(--red)">${tasks.filter(t=>t.due_date&&t.due_date<today()&&t.status!=='done').length}</b></div>
         <div class="settings-info-row"><span>Database</span><b style="color:var(--accent)">Supabase ✅</b></div>
+        <div class="settings-info-row"><span>App Version</span><b style="color:var(--accent)">3.0</b></div>
+        <div class="settings-info-row"><span>Auto-cleanup</span><b style="color:var(--muted)">Completed tasks purged after 60 days</b></div>
       </div>
     </div>`;
 }
@@ -1017,6 +1460,8 @@ function taskCard(t, showEmp=false, viewMode='assignee'){
           <span class="task-title-text">${esc(t.title)}</span>
           <span class="status-pill ${sc}">${sl}</span>
           ${t.priority&&t.priority!=='medium'?`<span class="priority-pill ${pm[t.priority]||''}">${t.priority}</span>`:''}
+          ${t.category?`<span class="cat-pill">🏷️ ${esc(t.category)}</span>`:''}
+          ${t.recurrence&&t.recurrence!=='none'?`<span class="recur-pill">🔁 ${esc(t.recurrence)}</span>`:''}
           ${showEmp&&emp?`<span class="emp-name-pill">${esc(emp.name)}</span>`:''}
         </div>
         ${metaParts.length?`<div class="task-meta">${metaParts.join('')}</div>`:''}
@@ -1167,11 +1612,13 @@ function openAssignModal(){
   const targets=employees.filter(e=>currentUser.isAdmin?true:e.id!==currentUser.id);
   if(!targets.length){alert('No other employees to assign to.');return;}
   document.getElementById('assignToEmp').innerHTML=targets.map(e=>`<option value="${e.id}">${esc(e.name)}${e.role?' — '+esc(e.role):''}</option>`).join('');
+  document.getElementById('taskCategory').innerHTML='<option value="">No category</option>'+categories.map(c=>`<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
   document.getElementById('taskTitle').value='';
   document.getElementById('taskComment').value='';
   document.getElementById('assignedBy').value=currentUser.isAdmin?'Admin':currentUser.name;
   document.getElementById('taskPriority').value='medium';
   document.getElementById('taskDue').value='';
+  document.getElementById('taskRecurrence').value='none';
   openModal('assignModal');
 }
 
@@ -1185,6 +1632,8 @@ async function saveTask(){
     comment:document.getElementById('taskComment').value.trim(),
     priority:document.getElementById('taskPriority').value,
     due_date:document.getElementById('taskDue').value||null,
+    category:document.getElementById('taskCategory').value||null,
+    recurrence:document.getElementById('taskRecurrence').value||'none',
     assigned_by:document.getElementById('assignedBy').value.trim(),
     assigned_by_id:currentUser.id,
     assigned_by_name:currentUser.name,
@@ -1221,7 +1670,7 @@ async function saveSelfFollowup(){
 function toggleCheck(id){
   const t=tasks.find(x=>x.id===id); if(!t) return;
   if(t.status==='done'){
-    sb.from('tasks').update({status:'todo',completion_note:null,completed_at:null,completed_by:null}).eq('id',id).then(()=>loadTasks());
+    sb.from('tasks').update({status:'todo',completion_note:null,completed_at:null,completed_at_iso:null,completed_by:null}).eq('id',id).then(()=>loadTasks());
   } else { openCompleteModal(id); }
 }
 
@@ -1232,7 +1681,7 @@ async function confirmComplete(){
   const now=ts();
   const t=tasks.find(x=>x.id===pendingCompleteId);
   const hist=[...(t.status_history||[]),{status:'Done',at:now,note}];
-  await sb.from('tasks').update({status:'done',completion_note:note,completed_by:by,completed_at:now,status_history:hist}).eq('id',pendingCompleteId);
+  await sb.from('tasks').update({status:'done',completion_note:note,completed_by:by,completed_at:now,completed_at_iso:new Date().toISOString(),status_history:hist}).eq('id',pendingCompleteId);
   closeModal('completeModal');
   await loadTasks();
 }
@@ -1245,7 +1694,7 @@ async function confirmStatus(){
   const t=tasks.find(x=>x.id===pendingStatusId);
   const hist=[...(t.status_history||[]),{status:ns.charAt(0).toUpperCase()+ns.slice(1),at:now,note}];
   const upd={status:ns,status_history:hist};
-  if(ns==='done'){upd.completed_at=now;upd.completion_note=note;}
+  if(ns==='done'){upd.completed_at=now;upd.completion_note=note;upd.completed_at_iso=new Date().toISOString();}
   await sb.from('tasks').update(upd).eq('id',pendingStatusId);
   closeModal('statusModal');
   await loadTasks();
@@ -1350,9 +1799,9 @@ function mobileNav(view){
   showView(view);
   // update bottom nav active state
   document.querySelectorAll('.bnav-item').forEach(b=>{ b.classList.remove('active','active-peer','active-special'); });
-  const map = {'tasks':'bnav-tasks','assigned_by_me':'bnav-assigned','manage_emp':'bnav-team','settings':'bnav-settings','overdue_all':'bnav-filter'};
+  const map = {'tasks':'bnav-tasks','assigned_by_me':'bnav-assigned','manage_emp':'bnav-team','settings':'bnav-settings','dashboard':'bnav-settings','myday':'bnav-myday','overdue_all':'bnav-filter'};
   const el = document.getElementById(map[view]);
-  if(el) el.classList.add(view==='assigned_by_me'?'active-peer':view==='settings'||view==='manage_emp'?'active-special':'active');
+  if(el) el.classList.add(view==='assigned_by_me'?'active-peer':(view==='settings'||view==='manage_emp'||view==='dashboard')?'active-special':'active');
 }
 
 function toggleFilterDrawer(){
